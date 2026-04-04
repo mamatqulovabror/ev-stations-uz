@@ -6,3 +6,7 @@ startCommand = "cd backend && python seed.py && uvicorn main:app --host 0.0.0.0 
 healthcheckPath = "/"
 healthcheckTimeout = 60
 restartPolicyType = "on_failure"
+
+["bot".deploy]
+startCommand = "python bot.py"
+restartPolicyType = "on_failure"
