@@ -39,6 +39,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @keyframes spin{to{transform:rotate(360deg)}}
 .mapboxgl-ctrl-logo,.mapboxgl-ctrl-attrib{display:none!important}
 #bottom-sheet{display:none!important}#stats-bar{display:none!important}
+
+#tab-bar{position:fixed;bottom:0;left:0;right:0;height:60px;background:#fff;border-top:1px solid #e0e0e0;display:flex;align-items:center;justify-content:space-around;z-index:1000;padding-bottom:env(safe-area-inset-bottom)}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;cursor:pointer;color:#aaa;font-size:10px;padding:6px 0}
+.tab-item.active{color:#00c853}
+.tab-item svg{width:22px;height:22px}
+#map{bottom:60px!important}
 </style>
 </head>
 <body>
@@ -177,5 +183,36 @@ map.on('load', async () => {
   document.getElementById('loading-overlay').style.display='none';
 });
 </script>
+
+<div id="tab-bar">
+  <div class="tab-item active" onclick="switchTab('map')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+    <span>Xarita</span>
+  </div>
+  <div class="tab-item" onclick="switchTab('stations')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+    <span>Stansiyalar</span>
+  </div>
+  <div class="tab-item" onclick="switchTab('scanner')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3M14 22v-4"/></svg>
+    <span>Scanner</span>
+  </div>
+  <div class="tab-item" onclick="switchTab('charging')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    <span>Zaryadlanmoqda</span>
+  </div>
+  <div class="tab-item" onclick="switchTab('profile')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Profil</span>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+</script>
+
 </body>
 </html>
