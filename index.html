@@ -22,7 +22,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 #bottom-sheet{background:#fff;border-top:2px solid #e0e0e0;height:220px;overflow-y:auto;flex-shrink:0;box-shadow:0 -2px 8px rgba(0,0,0,0.06)}
 #bottom-sheet::-webkit-scrollbar{width:3px}
 #bottom-sheet::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px}
-#bs-header{padding:8px 16px;font-size:12px;color:#aaa;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between}
+
 #stations-list{padding:8px 10px}
 .station-card{background:#f8f8f8;border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;border:1px solid transparent;transition:border-color 0.15s}
 .station-card:active{background:#f0f0f0}
@@ -58,7 +58,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 <div id="map"></div>
 <div id="bottom-sheet">
-  <div id="bs-header"><span id="bs-count">Stansiyalar</span></div>
   <div id="stations-list"></div>
 </div>
 <script>
@@ -93,7 +92,7 @@ async function loadStations(network='') {
     allStations = await res.json();
     renderMarkers(allStations);
     renderList(allStations);
-    document.getElementById('bs-count').textContent = allStations.length + ' ta stansiya';
+    
   } catch(e) {
     document.getElementById('stations-list').innerHTML = '<div id="empty">❌ API ga ulanib bolmadi</div>';
   }
