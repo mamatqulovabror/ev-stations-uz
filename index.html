@@ -66,7 +66,6 @@ let activeId = null;
 
 try { window.Telegram?.WebApp?.expand(); } catch(e) {}
 
-mapboxgl.accessToken = 'pk.eyJ1IjoiYWJyb3JiZXkiLCJhIjoiY21ubDFvc2N0MHJoajJxczRzYXBseXkxMyJ9.seI_m1vHmY_DsWk1enReIg';
 const map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/mapbox/streets-v12',
@@ -89,18 +88,10 @@ async function loadStations(network='') {
     const res = await fetch(url);
     allStations = await res.json();
     renderMarkers(allStations);
-        document.  } catch(e) {
     
+  } catch(e) {
+    document.getElementById('stations-list').innerHTML = '<div id="empty">❌ API ga ulanib bolmadi</div>';
   }
-}
-
-async function loadStats() {
-  try {
-    const res = await fetch(API + '/api/stats');
-    const s = await res.json();
-    
-    
-  } catch(e) {}
 }
 
 function renderMarkers(stations) {
@@ -119,56 +110,23 @@ function renderMarkers(stations) {
       .setLngLat([s.lng, s.lat])
       .setPopup(popup)
       .addTo(map);
-    el.addEventListener('click', () => );
+    el.addEventListener('click', () => 
+    markers[s.id] = m;
+  });
 }
 
-</script>
-</body>
-</html>function makeMarker(s, active) {
-  const el = document.createElement('div');
-  el.style.cssText = `width:14px;height:14px;background:${active?'#fff':'#00a888'};border:2px solid ${active?'#00a888':'#fff'};border-radius:50%;cursor:pointer;box-shadow:0 2px 6px rgba(0,168,136,0.5)`;
-  return el;
-}
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    loadStations(btn.dataset.network);
+  });
+});
 
-async function loadStations(network='') {
-  try {
-    const url = API + '/api/stations' + (network ? '?network='+encodeURIComponent(network) : '');
-    const res = await fetch(url);
-    allStations = await res.json();
-    renderMarkers(allStations);
-        document.  } catch(e) {
-    
-  }
-}
-
-async function loadStats() {
-  try {
-    const res = await fetch(API + '/api/stats');
-    const s = await res.json();
-    
-    
-  } catch(e) {}
-}
-
-function renderMarkers(stations) {
-  Object.values(markers).forEach(m => m.remove());
-  markers = {};
-  stations.forEach(s => {
-    const el = makeMarker(s, false);
-    const popup = new mapboxgl.Popup({offset:16,closeButton:false})
-      .setHTML(`<div style="font-family:-apple-system,sans-serif;min-width:160px">
-        <b style="font-size:13px;color:#111">${s.name}</b><br>
-        <span style="color:#00a888;font-weight:700;font-size:15px">${s.price_per_kwh} so'm/kWh</span><br>
-        <span style="color:#888;font-size:11px">${s.network||''} · ⚡${s.power_kw||'?'}kW</span><br>
-        ${s.address?'<span style="color:#aaa;font-size:11px">📍'+s.address+'</span>':''}
-      </div>`);
-    const m = new mapboxgl.Marker({element:el})
-      .setLngLat([s.lng, s.lat])
-      .setPopup(popup)
-      .addTo(map);
-    el.addEventListener('click', () => );
-}
-
+map.on('load', async () => {
+  await Promise.all([loadStations(), loadStats()]);
+  document.getElementById('loading-overlay').style.display='none';
+});
 </script>
 </body>
 </html>
