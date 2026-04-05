@@ -15,10 +15,18 @@ WEBAPP_URL = os.getenv("WEBAPP_URL", "https://mamatqulovabror.github.io/ev-stati
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+def open_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="⚡ Xaritani ochish",
+            web_app=WebAppInfo(url=WEBAPP_URL)
+        )
+    ]])
+
 def main_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="⚡ Xaritada ko'rish", web_app=WebAppInfo(url=WEBAPP_URL))],
+            [KeyboardButton(text="⚡ Xaritani ochish", web_app=WebAppInfo(url=WEBAPP_URL))],
             [KeyboardButton(text="📋 Barcha stansiyalar"), KeyboardButton(text="💰 Eng arzon")],
             [KeyboardButton(text="🔌 Tok Bor"), KeyboardButton(text="🔌 Beon"), KeyboardButton(text="🔌 EcoTok")],
             [KeyboardButton(text="📊 Statistika")],
@@ -31,9 +39,13 @@ async def cmd_start(msg: types.Message):
     await msg.answer(
         f"⚡ <b>AvtoTok</b> ga xush kelibsiz!\n\n"
         f"O'zbekistondagi barcha EV zaryadlash stansiyalari\n"
-        f"<b>Faqat 1kWh &lt; 2000 so'm</b> bo'lgan stansiyalar\n\n"
-        f"🗺 Xaritani ochish uchun quyidagi tugmani bosing:",
+        f"<b>Faqat 1kWh &lt; 2000 so'm</b>\n\n"
+        f"Pastdagi tugmani bosing:",
         parse_mode="HTML",
+        reply_markup=open_keyboard()
+    )
+    await msg.answer(
+        "Qo'shimcha buyruqlar:",
         reply_markup=main_keyboard()
     )
 
@@ -44,7 +56,7 @@ async def all_stations(msg: types.Message):
             res = await client.get(f"{API_URL}/api/stations", timeout=10)
             stations = res.json()
         except Exception:
-            await msg.answer("❌ API ga ulanib bo'lmadi. Keyinroq urinib ko'ring.")
+            await msg.answer("❌ API ga ulanib bo\'lmadi.")
             return
 
     if not stations:
@@ -73,7 +85,6 @@ async def cheapest(msg: types.Message):
 
     stations.sort(key=lambda x: x.get('price_per_kwh', 9999))
     top5 = stations[:5]
-
     text = "💰 <b>Eng arzon 5 ta stansiya:</b>\n\n"
     for i, s in enumerate(top5, 1):
         text += (
@@ -122,8 +133,7 @@ async def stats(msg: types.Message):
         f"📊 <b>AvtoTok statistikasi:</b>\n\n"
         f"⚡ Jami stansiyalar: <b>{s['total_stations']} ta</b>\n"
         f"💰 O'rtacha narx: <b>{s['avg_price_per_kwh']} so'm/kWh</b>\n"
-        f"📌 Filtr: 1kWh &lt; 2000 so'm\n\n"
-        f"🗺 Xaritada ko'rish uchun tugmani bosing!"
+        f"📌 Filtr: 1kWh &lt; 2000 so'm"
     )
     await msg.answer(text, parse_mode="HTML", reply_markup=main_keyboard())
 
@@ -134,9 +144,9 @@ async def cmd_help(msg: types.Message):
         "/start — Bosh menyu\n"
         "/help — Yordam\n\n"
         "Tugmalar orqali:\n"
-        "⚡ Xaritada ko'rish — interaktiv xarita\n"
-        "📋 Barcha stansiyalar — to'liq ro'yxat\n"
-        "💰 Eng arzon — narx bo'yicha saralangan\n"
+        "⚡ Xaritani ochish — Mini App\n"
+        "📋 Barcha stansiyalar — ro'yxat\n"
+        "💰 Eng arzon — narx bo'yicha\n"
         "🔌 Tarmoq bo'yicha — Tok Bor, Beon, EcoTok",
         parse_mode="HTML",
         reply_markup=main_keyboard()
