@@ -88,19 +88,12 @@ async function loadStations(network='') {
     const res = await fetch(url);
     allStations = await res.json();
     renderMarkers(allStations);
-        document.  } catch(e) {
+      } catch(e) {
     
   }
 }
 
-async function loadStats() {
-  try {
-    const res = await fetch(API + '/api/stats');
-    const s = await res.json();
-    
-    
-  } catch(e) {}
-}
+
 
 function renderMarkers(stations) {
   Object.values(markers).forEach(m => m.remove());
@@ -135,12 +128,12 @@ async function loadStations(network='') {
     const res = await fetch(url);
     allStations = await res.json();
     renderMarkers(allStations);
-        document.  } catch(e) {
+  } catch(e) {
     
   }
 }
 
-async function loadStats() {
+async function  {
   try {
     const res = await fetch(API + '/api/stats');
     const s = await res.json();
