@@ -66,6 +66,7 @@ let activeId = null;
 
 try { window.Telegram?.WebApp?.expand(); } catch(e) {}
 
+mapboxgl.accessToken = 'pk.eyJ1IjoiYWJyb3JiZXkiLCJhIjoiY21ubDFvc2N0MHJoajJxczRzYXBseXkxMyJ9.seI_m1vHmY_DsWk1enReIg';
 const map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/mapbox/streets-v12',
@@ -88,12 +89,19 @@ async function loadStations(network='') {
     const res = await fetch(url);
     allStations = await res.json();
     renderMarkers(allStations);
-      } catch(e) {
+        document.  } catch(e) {
     
   }
 }
 
-
+async function loadStats() {
+  try {
+    const res = await fetch(API + '/api/stats');
+    const s = await res.json();
+    
+    
+  } catch(e) {}
+}
 
 function renderMarkers(stations) {
   Object.values(markers).forEach(m => m.remove());
@@ -128,12 +136,12 @@ async function loadStations(network='') {
     const res = await fetch(url);
     allStations = await res.json();
     renderMarkers(allStations);
-  } catch(e) {
+        document.  } catch(e) {
     
   }
 }
 
-async function  {
+async function loadStats() {
   try {
     const res = await fetch(API + '/api/stats');
     const s = await res.json();
