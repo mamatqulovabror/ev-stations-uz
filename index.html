@@ -140,6 +140,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sci-speed-tag.slow{background:#fef3c7;color:#d97706}
 .stations-empty{text-align:center;padding:48px 24px;color:#aaa;font-size:14px}
 
+
+#balance-widget{position:absolute;bottom:100px;left:16px;z-index:10;background:#fff;border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,0.15);min-width:160px}
+.bw-icon{width:40px;height:40px;background:#e8f0fe;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bw-label{color:#888;font-size:11px;margin-bottom:2px;font-weight:500}
+.bw-amount{color:#1a3a8a;font-size:16px;font-weight:700;line-height:1.2}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
 </head>
@@ -392,6 +398,18 @@ map.on('load', async () => {
     <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><span class="profile-menu-label">Foydalanish ko'rsatmalari</span><span class="profile-menu-arrow">›</span></div>
     <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><span class="profile-menu-label">Yordam</span><span class="profile-menu-arrow">›</span></div>
     <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><span class="profile-menu-label">To'lov tarixi</span><span class="profile-menu-arrow">›</span></div>
+  </div>
+</div>
+<div id="balance-widget">
+  <div class="bw-icon">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2">
+      <rect x="1" y="4" width="22" height="16" rx="3" ry="3"/>
+      <line x1="1" y1="10" x2="23" y2="10"/>
+    </svg>
+  </div>
+  <div>
+    <div class="bw-label">Balans</div>
+    <div class="bw-amount" id="bw-amount-text">0 so'm</div>
   </div>
 </div>
 <div id="tab-bar">
