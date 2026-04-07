@@ -4,7 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>AvtoTok - EV Stansiyalar</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js">
+function loadTgProfile() {
+  try {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    const user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if(user) {
+      document.getElementById('tg-name').textContent = (user.first_name || '') + ' ' + (user.last_name || '');
+      document.getElementById('tg-phone').textContent = user.username ? '@' + user.username : '';
+      const avatar = document.getElementById('tg-avatar');
+      if(user.photo_url) {
+        avatar.innerHTML = '<img src="' + user.photo_url + '" style="width:90px;height:90px;border-radius:50%;object-fit:cover">';
+      }
+    }
+  } catch(e) {}
+}
+
+</script>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
 <style>
@@ -47,6 +63,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 #map{position:absolute;top:50px!important;bottom:80px!important;left:0;right:0}
 
 #filters{display:none!important}
+
+#profile-page{display:none;position:fixed;top:0;left:0;right:0;bottom:80px;background:#f2f4f8;overflow-y:auto;z-index:50}
+.profile-header{background:linear-gradient(160deg,#1a3a8a 0%,#0d2060 100%);padding:40px 20px 30px;text-align:center;position:relative}
+.profile-avatar{width:90px;height:90px;border-radius:50%;border:3px solid rgba(255,255,255,0.4);margin:0 auto 12px;object-fit:cover;background:#2a4fa0;display:flex;align-items:center;justify-content:center;font-size:36px}
+.profile-name{color:#fff;font-size:20px;font-weight:700;margin-bottom:4px}
+.profile-phone{color:rgba(255,255,255,0.75);font-size:14px}
+.profile-balance-card{background:#1a3a8a;border-radius:16px;margin:16px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
+.balance-amount{color:#fff;font-size:24px;font-weight:700}
+.balance-topup{background:transparent;border:1.5px solid #fff;color:#fff;border-radius:20px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+.profile-menu{background:#fff;border-radius:16px;margin:0 16px 16px;overflow:hidden}
+.profile-menu-item{display:flex;align-items:center;padding:16px 18px;border-bottom:1px solid #f0f0f0;cursor:pointer;gap:14px}
+.profile-menu-item:last-child{border-bottom:none}
+.profile-menu-icon{width:36px;height:36px;border-radius:10px;background:#f0f4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.profile-menu-label{flex:1;font-size:15px;color:#1a1a2e;font-weight:500}
+.profile-menu-arrow{color:#ccc;font-size:18px}
+
 </style>
 </head>
 <body>
@@ -196,6 +228,51 @@ map.on('load', async () => {
   document.getElementById('loading-overlay').style.display='none';
 });
 </script>
+
+<div id="profile-page">
+  <div class="profile-header">
+    <div class="profile-avatar" id="tg-avatar">👤</div>
+    <div class="profile-name" id="tg-name">Foydalanuvchi</div>
+    <div class="profile-phone" id="tg-phone">—</div>
+  </div>
+  <div class="profile-balance-card">
+    <div class="balance-amount">0 UZS</div>
+    <button class="balance-topup">To'ldirish +</button>
+  </div>
+  <div class="profile-menu">
+    <div class="profile-menu-item">
+      <div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+      <span class="profile-menu-label">Mening kartalarim</span>
+      <span class="profile-menu-arrow">›</span>
+    </div>
+    <div class="profile-menu-item">
+      <div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+      <span class="profile-menu-label">Quvvatlash tarixi</span>
+      <span class="profile-menu-arrow">›</span>
+    </div>
+    <div class="profile-menu-item">
+      <div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+      <span class="profile-menu-label">Sozlamalar</span>
+      <span class="profile-menu-arrow">›</span>
+    </div>
+    <div class="profile-menu-item">
+      <div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      <span class="profile-menu-label">Foydalanish ko'rsatmalari</span>
+      <span class="profile-menu-arrow">›</span>
+    </div>
+    <div class="profile-menu-item">
+      <div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <span class="profile-menu-label">Yordam</span>
+      <span class="profile-menu-arrow">›</span>
+    </div>
+    <div class="profile-menu-item">
+      <div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <span class="profile-menu-label">To'lov tarixi</span>
+      <span class="profile-menu-arrow">›</span>
+    </div>
+  </div>
+</div>
+
 <div id="tab-bar">
   <div class="tab-item active" onclick="switchTab(this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
@@ -222,6 +299,20 @@ map.on('load', async () => {
 function switchTab(el){
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  const idx = [...document.querySelectorAll('.tab-item')].indexOf(el);
+  const profilePage = document.getElementById('profile-page');
+  const mapEl = document.getElementById('map');
+  const header = document.getElementById('header');
+  if(idx === 4) {
+    profilePage.style.display = 'block';
+    if(mapEl) mapEl.style.display = 'none';
+    if(header) header.style.display = 'none';
+    loadTgProfile();
+  } else {
+    profilePage.style.display = 'none';
+    if(mapEl) mapEl.style.display = 'block';
+    if(header) header.style.display = 'flex';
+  }
 }
 </script>
 </body>
