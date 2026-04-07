@@ -117,6 +117,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .profile-menu-label{flex:1;font-size:15px;color:#1a1a2e;font-weight:500}
 .profile-menu-arrow{color:#ccc;font-size:18px}
 
+
+#stations-page{display:none;position:fixed;top:0;left:0;right:0;bottom:80px;background:#f2f4f8;z-index:50;flex-direction:column}
+#stations-page.active{display:flex}
+.stations-header{background:#fff;padding:16px 16px 0;border-bottom:1px solid #eee}
+.stations-header-title{font-size:18px;font-weight:700;color:#1a1a2e;margin-bottom:12px}
+.stations-tabs{display:flex;gap:8px;padding-bottom:0}
+.station-tab-btn{flex:1;padding:10px 8px;border:none;border-radius:12px 12px 0 0;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.station-tab-btn.active{background:#1a3a8a;color:#fff}
+.station-tab-btn:not(.active){background:#f0f4ff;color:#1a3a8a}
+.stations-list{flex:1;overflow-y:auto;padding:12px}
+.station-card-item{background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,0.06)}
+.sci-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.sci-name{font-size:15px;font-weight:700;color:#1a1a2e;flex:1;margin-right:8px}
+.sci-price{font-size:15px;font-weight:700;color:#2ecc40}
+.sci-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.sci-badge{background:#f0f4ff;color:#1a3a8a;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:500}
+.sci-badge.power{background:#fff8e1;color:#f59e0b}
+.sci-addr{font-size:12px;color:#999;display:flex;align-items:center;gap:4px}
+.sci-speed-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;margin-bottom:8px}
+.sci-speed-tag.fast{background:#e8faf0;color:#16a34a}
+.sci-speed-tag.slow{background:#fef3c7;color:#d97706}
+.stations-empty{text-align:center;padding:48px 24px;color:#aaa;font-size:14px}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
 </head>
@@ -313,6 +336,24 @@ map.on('load', async () => {
 </div>
 
 
+
+<div id="stations-page">
+  <div class="stations-header">
+    <div class="stations-header-title">⚡ Stansiyalar</div>
+    <div class="stations-tabs">
+      <button class="station-tab-btn active" onclick="loadStationsList('fast', this)">
+        ⚡ Tez zaryadlash
+      </button>
+      <button class="station-tab-btn" onclick="loadStationsList('slow', this)">
+        🔌 Sekin zaryadlash
+      </button>
+    </div>
+  </div>
+  <div class="stations-list" id="stations-list-container">
+    <div class="stations-empty">Yuklanmoqda...</div>
+  </div>
+</div>
+
 <canvas id="scanner-canvas" style="display:none"></canvas>
 <div id="scanner-page">
   <video id="scanner-video" autoplay playsinline muted></video>
@@ -409,13 +450,20 @@ function switchTab(el){
   const hide = () => {
     profilePage.style.display='none';
     scannerPage.classList.remove('active');
+    document.getElementById('stations-page').classList.remove('active');
     document.getElementById('scanner-result').classList.remove('active');
     if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
     if(scannerInterval){clearInterval(scannerInterval);scannerInterval=null;}
     if(mapEl) mapEl.style.display='block';
     if(header) header.style.display='flex';
   };
-  if(idx===2){
+  if(idx===1){
+    hide();
+    if(mapEl) mapEl.style.display='none';
+    if(header) header.style.display='none';
+    document.getElementById('stations-page').classList.add('active');
+    loadStationsList('fast', document.querySelector('.station-tab-btn'));
+  } else if(idx===2){
     hide();
     if(mapEl) mapEl.style.display='none';
     if(header) header.style.display='none';
@@ -429,6 +477,53 @@ function switchTab(el){
   } else {
     hide();
   }
+}
+
+
+function loadStationsList(type, btn) {
+  // Tab buttons
+  document.querySelectorAll('.station-tab-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  
+  const container = document.getElementById('stations-list-container');
+  container.innerHTML = '<div class="stations-empty">Yuklanmoqda...</div>';
+  
+  fetch('https://ev-stations-uz-production.up.railway.app/api/stations')
+    .then(r => r.json())
+    .then(stations => {
+      // Tez: 50kW va undan yuqori, Sekin: 50kW dan kam
+      const filtered = type === 'fast'
+        ? stations.filter(s => (s.power_kw || 0) >= 50)
+        : stations.filter(s => (s.power_kw || 0) < 50);
+      
+      if(!filtered.length) {
+        container.innerHTML = '<div class="stations-empty">Stansiya topilmadi</div>';
+        return;
+      }
+      
+      container.innerHTML = filtered.map(s => {
+        const isFast = (s.power_kw || 0) >= 50;
+        const connectors = (s.connector_types || 'CCS2').split(',').map(c =>
+          '<span class="sci-badge">' + c.trim() + '</span>'
+        ).join('');
+        return `<div class="station-card-item">
+          <span class="sci-speed-tag ${isFast ? 'fast' : 'slow'}">${isFast ? '⚡ Tez' : '🔌 Sekin'} • ${s.power_kw || '?'} kW</span>
+          <div class="sci-top">
+            <div class="sci-name">${s.name}</div>
+            <div class="sci-price">${s.price_per_kwh || '?'} so'm/kWh</div>
+          </div>
+          <div class="sci-badges">
+            ${connectors}
+            <span class="sci-badge">${s.network || '—'}</span>
+            <span class="sci-badge">${s.working_hours || '24/7'}</span>
+          </div>
+          <div class="sci-addr">📍 ${s.address || '—'}</div>
+        </div>`;
+      }).join('');
+    })
+    .catch(() => {
+      container.innerHTML = '<div class="stations-empty">Xatolik yuz berdi</div>';
+    });
 }
 
 function openScanner(){
