@@ -5,56 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>AvtoTok - EV Stansiyalar</title>
 <script src="https://telegram.org/js/telegram-web-app.js">
-
-let scannerStream = null;
-let scannerInterval = null;
-
-function openScanner() {
-  document.getElementById('scanner-page').classList.add('active');
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
-    .then(stream => {
-      scannerStream = stream;
-      const video = document.getElementById('scanner-video');
-      video.srcObject = stream;
-      // QR scanning simulation — real QR uchun jsQR lib kerak
-      // Hozircha 3 soniyadan keyin demo result ko'rsatamiz
-      // Real loyihada jsQR.js qo'shiladi
-    })
-    .catch(err => {
-      alert('Kamera ruxsati kerak: ' + err.message);
-      closeScanner();
-    });
-}
-
-function closeScanner() {
-  document.getElementById('scanner-page').classList.remove('active');
-  if(scannerStream) {
-    scannerStream.getTracks().forEach(t => t.stop());
-    scannerStream = null;
-  }
-  // Xarita tabga qaytamiz
-  const firstTab = document.querySelector('.tab-item');
-  if(firstTab) switchTab(firstTab);
-}
-
-function showScanResult(stationName, info) {
-  closeScanner();
-  document.getElementById('result-name').textContent = stationName || 'EV Stansiya';
-  document.getElementById('result-info').textContent = info || 'Zaryadlashga tayyor';
-  document.getElementById('scanner-result').classList.add('active');
-}
-
-function closeResult() {
-  document.getElementById('scanner-result').classList.remove('active');
-  const firstTab = document.querySelector('.tab-item');
-  if(firstTab) switchTab(firstTab);
-}
-
-function startCharging() {
-  alert('Zaryadlash boshlandi! ⚡');
-  closeResult();
-}
-
 function loadTgProfile() {
   try {
     const tg = window.Telegram && window.Telegram.WebApp;
@@ -152,8 +102,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .result-station-info{color:#666;font-size:14px;text-align:center;margin-bottom:28px}
 .result-charge-btn{background:linear-gradient(135deg,#1a3a8a,#2ecc40);color:#fff;border:none;padding:16px 48px;border-radius:28px;font-size:17px;font-weight:700;cursor:pointer;width:100%;max-width:300px}
 .result-back-btn{margin-top:14px;background:none;border:1.5px solid #ccc;color:#666;padding:12px 32px;border-radius:24px;font-size:14px;cursor:pointer}
+#profile-page{display:none;position:fixed;top:0;left:0;right:0;bottom:80px;background:#f2f4f8;overflow-y:auto;z-index:50}
+.profile-header{background:linear-gradient(160deg,#1a3a8a 0%,#0d2060 100%);padding:40px 20px 30px;text-align:center}
+.profile-avatar{width:90px;height:90px;border-radius:50%;border:3px solid rgba(255,255,255,0.4);margin:0 auto 12px;background:#2a4fa0;display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden}
+.profile-name{color:#fff;font-size:20px;font-weight:700;margin-bottom:4px}
+.profile-phone{color:rgba(255,255,255,0.75);font-size:14px}
+.profile-balance-card{background:#1a3a8a;border-radius:16px;margin:16px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
+.balance-amount{color:#fff;font-size:24px;font-weight:700}
+.balance-topup{background:transparent;border:1.5px solid #fff;color:#fff;border-radius:20px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.profile-menu{background:#fff;border-radius:16px;margin:0 16px 16px;overflow:hidden}
+.profile-menu-item{display:flex;align-items:center;padding:16px 18px;border-bottom:1px solid #f0f0f0;cursor:pointer;gap:14px}
+.profile-menu-item:last-child{border-bottom:none}
+.profile-menu-icon{width:36px;height:36px;border-radius:10px;background:#f0f4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.profile-menu-label{flex:1;font-size:15px;color:#1a1a2e;font-weight:500}
+.profile-menu-arrow{color:#ccc;font-size:18px}
 
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
 </head>
 <body>
 <div id="loading-overlay">
@@ -303,30 +268,6 @@ map.on('load', async () => {
 });
 </script>
 
-
-<div id="scanner-page">
-  <video id="scanner-video" autoplay playsinline muted></video>
-  <div class="scanner-overlay">
-    <div class="scanner-title">QR Kodni skanerlang</div>
-    <div class="scanner-frame">
-      <div class="scanner-frame-tr"></div>
-      <div class="scanner-frame-bl"></div>
-      <div class="scanner-line"></div>
-    </div>
-    <div class="scanner-hint">Stansiyadagi QR kodni ramka ichiga joylashtiring</div>
-    <button class="scanner-cancel" onclick="closeScanner()">Bekor qilish</button>
-  </div>
-</div>
-<div id="scanner-result">
-  <div class="result-icon">
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2ecc40" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-  </div>
-  <div class="result-station-name" id="result-name">Stansiya topildi</div>
-  <div class="result-station-info" id="result-info">Connector: CCS2 • 80 kW</div>
-  <button class="result-charge-btn" onclick="startCharging()">⚡ Zaryadlashni boshlash</button>
-  <button class="result-back-btn" onclick="closeResult()">← Orqaga</button>
-</div>
-
 <div id="profile-page">
   <div class="profile-header">
     <div class="profile-avatar" id="tg-avatar">👤</div>
@@ -371,6 +312,47 @@ map.on('load', async () => {
   </div>
 </div>
 
+
+<canvas id="scanner-canvas" style="display:none"></canvas>
+<div id="scanner-page">
+  <video id="scanner-video" autoplay playsinline muted></video>
+  <div class="scanner-overlay">
+    <div class="scanner-title">QR Kodni skanerlang</div>
+    <div class="scanner-frame">
+      <div class="scanner-frame-tr"></div>
+      <div class="scanner-frame-bl"></div>
+      <div class="scanner-line"></div>
+    </div>
+    <div class="scanner-hint">Stansiyadagi QR kodni ramka ichiga joylashtiring</div>
+    <button class="scanner-cancel" onclick="closeScanner()">✕ Bekor qilish</button>
+  </div>
+</div>
+<div id="scanner-result">
+  <div class="result-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2ecc40" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+  <div class="result-station-name" id="result-name">Stansiya topildi</div>
+  <div class="result-station-info" id="result-info">Zaryadlashga tayyor</div>
+  <button class="result-charge-btn" onclick="startCharging()">⚡ Zaryadlashni boshlash</button>
+  <button class="result-back-btn" onclick="closeResult()">← Orqaga</button>
+</div>
+<div id="profile-page">
+  <div class="profile-header">
+    <div class="profile-avatar" id="tg-avatar">👤</div>
+    <div class="profile-name" id="tg-name">Foydalanuvchi</div>
+    <div class="profile-phone" id="tg-phone">—</div>
+  </div>
+  <div class="profile-balance-card">
+    <div class="balance-amount">0 UZS</div>
+    <button class="balance-topup">To'ldirish +</button>
+  </div>
+  <div class="profile-menu">
+    <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><span class="profile-menu-label">Mening kartalarim</span><span class="profile-menu-arrow">›</span></div>
+    <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><span class="profile-menu-label">Quvvatlash tarixi</span><span class="profile-menu-arrow">›</span></div>
+    <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><span class="profile-menu-label">Sozlamalar</span><span class="profile-menu-arrow">›</span></div>
+    <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><span class="profile-menu-label">Foydalanish ko'rsatmalari</span><span class="profile-menu-arrow">›</span></div>
+    <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><span class="profile-menu-label">Yordam</span><span class="profile-menu-arrow">›</span></div>
+    <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><span class="profile-menu-label">To'lov tarixi</span><span class="profile-menu-arrow">›</span></div>
+  </div>
+</div>
 <div id="tab-bar">
   <div class="tab-item active" onclick="switchTab(this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
@@ -401,26 +383,143 @@ function switchTab(el){
   const profilePage = document.getElementById('profile-page');
   const mapEl = document.getElementById('map');
   const header = document.getElementById('header');
-  if(idx === 2) {
-    document.getElementById('scanner-page').classList.add('active');
-    document.getElementById('profile-page').style.display='none';
-    if(mapEl) mapEl.style.display='none';
-    if(header) header.style.display='none';
-    openScanner();
-  } else if(idx === 4) {
+  if(idx === 4) {
     profilePage.style.display = 'block';
     if(mapEl) mapEl.style.display = 'none';
     if(header) header.style.display = 'none';
     loadTgProfile();
   } else {
     profilePage.style.display = 'none';
-    document.getElementById('scanner-page').classList.remove('active');
-    document.getElementById('scanner-result').classList.remove('active');
-    if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
     if(mapEl) mapEl.style.display = 'block';
     if(header) header.style.display = 'flex';
   }
 }
+
+let scannerStream = null;
+let scannerInterval = null;
+
+function switchTab(el){
+  document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const idx = [...document.querySelectorAll('.tab-item')].indexOf(el);
+  const profilePage = document.getElementById('profile-page');
+  const scannerPage = document.getElementById('scanner-page');
+  const mapEl = document.getElementById('map');
+  const header = document.getElementById('header');
+  const hide = () => {
+    profilePage.style.display='none';
+    scannerPage.classList.remove('active');
+    document.getElementById('scanner-result').classList.remove('active');
+    if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
+    if(scannerInterval){clearInterval(scannerInterval);scannerInterval=null;}
+    if(mapEl) mapEl.style.display='block';
+    if(header) header.style.display='flex';
+  };
+  if(idx===2){
+    hide();
+    if(mapEl) mapEl.style.display='none';
+    if(header) header.style.display='none';
+    openScanner();
+  } else if(idx===4){
+    hide();
+    if(mapEl) mapEl.style.display='none';
+    if(header) header.style.display='none';
+    profilePage.style.display='block';
+    loadTgProfile();
+  } else {
+    hide();
+  }
+}
+
+function openScanner(){
+  document.getElementById('scanner-page').classList.add('active');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})
+    .then(stream=>{
+      scannerStream=stream;
+      const video=document.getElementById('scanner-video');
+      video.srcObject=stream;
+      video.addEventListener('loadedmetadata',()=>{
+        video.play();
+        scannerInterval=setInterval(()=>{
+          if(video.readyState===video.HAVE_ENOUGH_DATA){
+            const canvas=document.getElementById('scanner-canvas');
+            canvas.width=video.videoWidth;
+            canvas.height=video.videoHeight;
+            canvas.getContext('2d').drawImage(video,0,0);
+            const img=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);
+            if(typeof jsQR!=='undefined'){
+              const code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
+              if(code&&code.data){
+                clearInterval(scannerInterval);scannerInterval=null;
+                handleQRResult(code.data);
+              }
+            }
+          }
+        },200);
+      });
+    })
+    .catch(err=>{
+      alert('Kamera ochilmadi: '+err.message);
+      closeScanner();
+    });
+}
+
+function handleQRResult(data){
+  if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
+  document.getElementById('scanner-page').classList.remove('active');
+  let stationId=data;
+  if(data.includes('station/')) stationId=data.split('station/').pop();
+  fetch('https://ev-stations-uz-production.up.railway.app/api/stations')
+    .then(r=>r.json())
+    .then(stations=>{
+      const s=stations.find(st=>String(st.id)===String(stationId))||null;
+      if(s){
+        showScanResult(s.name,(s.connector_types||'CCS2')+' • '+(s.power_kw||80)+'kW • '+(s.price_per_kwh||1500)+" so'm/kWh");
+      } else {
+        showScanResult('EV Stansiya','QR: '+data);
+      }
+    })
+    .catch(()=>showScanResult('EV Stansiya','QR: '+data));
+}
+
+function showScanResult(name,info){
+  document.getElementById('result-name').textContent=name;
+  document.getElementById('result-info').textContent=info;
+  document.getElementById('scanner-result').classList.add('active');
+}
+
+function closeScanner(){
+  document.getElementById('scanner-page').classList.remove('active');
+  if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
+  if(scannerInterval){clearInterval(scannerInterval);scannerInterval=null;}
+  const first=document.querySelector('.tab-item');
+  if(first) switchTab(first);
+}
+
+function closeResult(){
+  document.getElementById('scanner-result').classList.remove('active');
+  const first=document.querySelector('.tab-item');
+  if(first) switchTab(first);
+}
+
+function startCharging(){
+  alert('Zaryadlash boshlandi! ⚡\nStansiya bilan ulanmoqda...');
+  closeResult();
+}
+
+function loadTgProfile(){
+  try{
+    const user=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initDataUnsafe&&window.Telegram.WebApp.initDataUnsafe.user;
+    if(user){
+      document.getElementById('tg-name').textContent=(user.first_name||'')+(user.last_name?' '+user.last_name:'');
+      document.getElementById('tg-phone').textContent=user.username?'@'+user.username:'';
+      if(user.photo_url){
+        document.getElementById('tg-avatar').innerHTML='<img src="'+user.photo_url+'" style="width:90px;height:90px;border-radius:50%;object-fit:cover">';
+      }
+    }
+  }catch(e){}
+}
+
 </script>
 </body>
 </html>
