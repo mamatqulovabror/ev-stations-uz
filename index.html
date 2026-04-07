@@ -5,6 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>AvtoTok - EV Stansiyalar</title>
 <script src="https://telegram.org/js/telegram-web-app.js">
+
+let scannerStream = null;
+let scannerInterval = null;
+
+function openScanner() {
+  document.getElementById('scanner-page').classList.add('active');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(stream => {
+      scannerStream = stream;
+      const video = document.getElementById('scanner-video');
+      video.srcObject = stream;
+      // QR scanning simulation — real QR uchun jsQR lib kerak
+      // Hozircha 3 soniyadan keyin demo result ko'rsatamiz
+      // Real loyihada jsQR.js qo'shiladi
+    })
+    .catch(err => {
+      alert('Kamera ruxsati kerak: ' + err.message);
+      closeScanner();
+    });
+}
+
+function closeScanner() {
+  document.getElementById('scanner-page').classList.remove('active');
+  if(scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+  // Xarita tabga qaytamiz
+  const firstTab = document.querySelector('.tab-item');
+  if(firstTab) switchTab(firstTab);
+}
+
+function showScanResult(stationName, info) {
+  closeScanner();
+  document.getElementById('result-name').textContent = stationName || 'EV Stansiya';
+  document.getElementById('result-info').textContent = info || 'Zaryadlashga tayyor';
+  document.getElementById('scanner-result').classList.add('active');
+}
+
+function closeResult() {
+  document.getElementById('scanner-result').classList.remove('active');
+  const firstTab = document.querySelector('.tab-item');
+  if(firstTab) switchTab(firstTab);
+}
+
+function startCharging() {
+  alert('Zaryadlash boshlandi! ⚡');
+  closeResult();
+}
+
 function loadTgProfile() {
   try {
     const tg = window.Telegram && window.Telegram.WebApp;
@@ -78,6 +128,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .profile-menu-icon{width:36px;height:36px;border-radius:10px;background:#f0f4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .profile-menu-label{flex:1;font-size:15px;color:#1a1a2e;font-weight:500}
 .profile-menu-arrow{color:#ccc;font-size:18px}
+
+
+#scanner-page{display:none;position:fixed;top:0;left:0;right:0;bottom:80px;background:#000;z-index:50;flex-direction:column;align-items:center;justify-content:center}
+#scanner-page.active{display:flex}
+#scanner-video{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0}
+.scanner-overlay{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;width:100%}
+.scanner-frame{width:260px;height:260px;position:relative;margin-bottom:24px}
+.scanner-frame::before,.scanner-frame::after{content:'';position:absolute;width:50px;height:50px;border-color:#2ecc40;border-style:solid}
+.scanner-frame::before{top:0;left:0;border-width:4px 0 0 4px;border-radius:4px 0 0 0}
+.scanner-frame::after{bottom:0;right:0;border-width:0 4px 4px 0;border-radius:0 0 4px 0}
+.scanner-frame-tr{position:absolute;top:0;right:0;width:50px;height:50px;border-top:4px solid #2ecc40;border-right:4px solid #2ecc40;border-radius:0 4px 0 0}
+.scanner-frame-bl{position:absolute;bottom:0;left:0;width:50px;height:50px;border-bottom:4px solid #2ecc40;border-left:4px solid #2ecc40;border-radius:0 0 0 4px}
+.scanner-line{position:absolute;top:0;left:4px;right:4px;height:2px;background:linear-gradient(90deg,transparent,#2ecc40,transparent);animation:scan 2s linear infinite}
+@keyframes scan{0%{top:4px}100%{top:252px}}
+.scanner-title{color:#fff;font-size:18px;font-weight:700;margin-bottom:8px;text-align:center}
+.scanner-hint{color:rgba(255,255,255,0.65);font-size:13px;text-align:center;padding:0 32px}
+.scanner-cancel{margin-top:32px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);color:#fff;padding:12px 32px;border-radius:24px;font-size:15px;font-weight:600;cursor:pointer}
+#scanner-result{display:none;position:fixed;top:0;left:0;right:0;bottom:80px;background:#f2f4f8;z-index:60;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+#scanner-result.active{display:flex}
+.result-icon{width:80px;height:80px;background:#e8faf0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.result-station-name{font-size:20px;font-weight:700;color:#1a1a2e;text-align:center;margin-bottom:8px}
+.result-station-info{color:#666;font-size:14px;text-align:center;margin-bottom:28px}
+.result-charge-btn{background:linear-gradient(135deg,#1a3a8a,#2ecc40);color:#fff;border:none;padding:16px 48px;border-radius:28px;font-size:17px;font-weight:700;cursor:pointer;width:100%;max-width:300px}
+.result-back-btn{margin-top:14px;background:none;border:1.5px solid #ccc;color:#666;padding:12px 32px;border-radius:24px;font-size:14px;cursor:pointer}
 
 </style>
 </head>
@@ -229,6 +303,30 @@ map.on('load', async () => {
 });
 </script>
 
+
+<div id="scanner-page">
+  <video id="scanner-video" autoplay playsinline muted></video>
+  <div class="scanner-overlay">
+    <div class="scanner-title">QR Kodni skanerlang</div>
+    <div class="scanner-frame">
+      <div class="scanner-frame-tr"></div>
+      <div class="scanner-frame-bl"></div>
+      <div class="scanner-line"></div>
+    </div>
+    <div class="scanner-hint">Stansiyadagi QR kodni ramka ichiga joylashtiring</div>
+    <button class="scanner-cancel" onclick="closeScanner()">Bekor qilish</button>
+  </div>
+</div>
+<div id="scanner-result">
+  <div class="result-icon">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2ecc40" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+  </div>
+  <div class="result-station-name" id="result-name">Stansiya topildi</div>
+  <div class="result-station-info" id="result-info">Connector: CCS2 • 80 kW</div>
+  <button class="result-charge-btn" onclick="startCharging()">⚡ Zaryadlashni boshlash</button>
+  <button class="result-back-btn" onclick="closeResult()">← Orqaga</button>
+</div>
+
 <div id="profile-page">
   <div class="profile-header">
     <div class="profile-avatar" id="tg-avatar">👤</div>
@@ -303,13 +401,22 @@ function switchTab(el){
   const profilePage = document.getElementById('profile-page');
   const mapEl = document.getElementById('map');
   const header = document.getElementById('header');
-  if(idx === 4) {
+  if(idx === 2) {
+    document.getElementById('scanner-page').classList.add('active');
+    document.getElementById('profile-page').style.display='none';
+    if(mapEl) mapEl.style.display='none';
+    if(header) header.style.display='none';
+    openScanner();
+  } else if(idx === 4) {
     profilePage.style.display = 'block';
     if(mapEl) mapEl.style.display = 'none';
     if(header) header.style.display = 'none';
     loadTgProfile();
   } else {
     profilePage.style.display = 'none';
+    document.getElementById('scanner-page').classList.remove('active');
+    document.getElementById('scanner-result').classList.remove('active');
+    if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
     if(mapEl) mapEl.style.display = 'block';
     if(header) header.style.display = 'flex';
   }
