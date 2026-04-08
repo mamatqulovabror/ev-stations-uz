@@ -3,13 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import math
+from datetime import datetime, timedelta
+
 from database import get_db, engine
 import models
 import schemas
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="EV Stations UZ", version="1.0.0")
+app = FastAPI(title="EV Stations UZ", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,36 +20,67 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# =========================
+# UTIL
+# =========================
+
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371
     dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
+    dlon = math.radians(lat2 - lon2)
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
     return R * 2 * math.asin(math.sqrt(a))
 
+def update_station_status(db: Session):
+    stations = db.query(models.Station).all()
+
+    for s in stations:
+        if s.last_ping:
+            if datetime.utcnow() - s.last_ping > timedelta(seconds=60):
+                s.status = "offline"
+
+    db.commit()
+
+# =========================
+# ROOT
+# =========================
+
 @app.get("/")
 def root():
-    return {"message": "EV Stations UZ API", "filter": "price < 2000 som/kWh"}
+    return {"message": "EV Stations UZ API v2", "status": "running"}
+
+# =========================
+# STATIONS
+# =========================
 
 @app.get("/api/stations", response_model=List[schemas.Station])
 def get_stations(
     lat: Optional[float] = Query(None),
     lng: Optional[float] = Query(None),
     radius: Optional[float] = Query(None, description="km"),
-    max_price: float = Query(2000, description="max price per kWh in som"),
+    max_price: float = Query(2000),
     network: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
+    # 🔥 STATUS UPDATE
+    update_station_status(db)
+
     query = db.query(models.Station).filter(
         models.Station.price_per_kwh < max_price,
         models.Station.is_active == True
     )
+
     if network:
         query = query.filter(models.Station.network == network)
-    stations = query.all()
+
+    # 🔥 PERFORMANCE FIX (oldingi .all() ni o‘ldirdik)
+    stations = query.limit(100).all()
+
     if lat and lng and radius:
-        stations = [s for s in stations if haversine(lat, lng, s.lat, s.lng) <= radius]
+        stations = [s for s in stations if haversine(lat, lng, s.lat, s.lon) <= radius]
+
     return stations
+
 
 @app.get("/api/stations/{station_id}", response_model=schemas.Station)
 def get_station(station_id: int, db: Session = Depends(get_db)):
@@ -55,6 +88,7 @@ def get_station(station_id: int, db: Session = Depends(get_db)):
     if not station:
         raise HTTPException(status_code=404, detail="Station not found")
     return station
+
 
 @app.post("/api/stations", response_model=schemas.Station)
 def create_station(station: schemas.StationCreate, db: Session = Depends(get_db)):
@@ -64,20 +98,93 @@ def create_station(station: schemas.StationCreate, db: Session = Depends(get_db)
     db.refresh(db_station)
     return db_station
 
+
+# =========================
+# 🔥 NEW: PING (REAL-TIME)
+# =========================
+
+@app.post("/api/stations/{station_id}/ping")
+def ping_station(station_id: int, db: Session = Depends(get_db)):
+    station = db.query(models.Station).filter(models.Station.id == station_id).first()
+
+    if not station:
+        raise HTTPException(status_code=404, detail="Station not found")
+
+    station.last_ping = datetime.utcnow()
+    station.status = "available"
+
+    db.commit()
+
+    return {"status": "ok"}
+
+
+# =========================
+# 🔥 NEW: CHARGING SESSION
+# =========================
+
+@app.post("/api/sessions/start")
+def start_session(station_id: int, user_id: int, db: Session = Depends(get_db)):
+    station = db.query(models.Station).filter(models.Station.id == station_id).first()
+
+    if not station:
+        raise HTTPException(status_code=404, detail="Station not found")
+
+    session = models.ChargingSession(
+        station_id=station_id,
+        user_id=user_id
+    )
+
+    station.status = "busy"
+
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+
+    return {"session_id": session.id}
+
+
+@app.post("/api/sessions/end")
+def end_session(session_id: int, kwh_used: float, db: Session = Depends(get_db)):
+    session = db.query(models.ChargingSession).filter(models.ChargingSession.id == session_id).first()
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session.end_time = datetime.utcnow()
+    session.kwh_used = kwh_used
+    session.total_price = kwh_used * 0.2
+
+    station = db.query(models.Station).filter(models.Station.id == session.station_id).first()
+    if station:
+        station.status = "available"
+
+    db.commit()
+
+    return {"total_price": session.total_price}
+
+
+# =========================
+# OTHER
+# =========================
+
 @app.get("/api/networks")
 def get_networks(db: Session = Depends(get_db)):
     networks = db.query(models.Station.network).distinct().all()
     return [n[0] for n in networks if n[0]]
 
+
 @app.get("/api/stats")
 def get_stats(db: Session = Depends(get_db)):
-    total = db.query(models.Station).filter(models.Station.price_per_kwh < 2000).count()
     from sqlalchemy import func
+
+    total = db.query(models.Station).filter(models.Station.price_per_kwh < 2000).count()
+
     avg_price = db.query(func.avg(models.Station.price_per_kwh)).filter(
         models.Station.price_per_kwh < 2000
     ).scalar()
+
     return {
         "total_stations": total,
         "avg_price_per_kwh": round(avg_price or 0, 0),
-        "filter": "price < 2000 som/kWh"
+        "version": "v2"
     }
