@@ -5,13 +5,17 @@ from typing import List, Optional
 import math
 from datetime import datetime, timedelta
 
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt
+
 from database import get_db, engine
 import models
 import schemas
+from auth import create_token
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="EV Stations UZ", version="3.0.0")
+app = FastAPI(title="EV Stations UZ", version="4.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,6 +23,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# =========================
+# 🔐 AUTH SYSTEM
+# =========================
+
+security = HTTPBearer()
+
+SECRET_KEY = "SECRET123"
+ALGORITHM = "HS256"
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload["user_id"]
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 # =========================
 # UTIL
@@ -34,7 +55,6 @@ def haversine(lat1, lon1, lat2, lon2):
 
 def update_station_status(db: Session):
     now = datetime.utcnow()
-
     stations = db.query(models.Station).all()
 
     for s in stations:
@@ -51,10 +71,19 @@ def update_station_status(db: Session):
 @app.get("/")
 def root():
     return {
-        "message": "EV Stations UZ API v3",
+        "message": "EV Stations UZ API v4",
         "status": "running",
-        "features": ["live_status", "sessions", "ping"]
+        "features": ["live_status", "sessions", "auth"]
     }
+
+# =========================
+# 🔐 LOGIN
+# =========================
+
+@app.post("/api/login")
+def login(user_id: int):
+    token = create_token(user_id)
+    return {"access_token": token}
 
 # =========================
 # STATIONS
@@ -123,7 +152,6 @@ def ping_station(station_id: int, db: Session = Depends(get_db)):
 
     station.last_ping = datetime.utcnow()
 
-    # agar busy bo‘lmasa available qilamiz
     if station.status != "busy":
         station.status = "available"
 
@@ -132,11 +160,15 @@ def ping_station(station_id: int, db: Session = Depends(get_db)):
     return {"status": station.status}
 
 # =========================
-# 🔥 CHARGING SESSION (CORE)
+# 🔥 CHARGING SESSION
 # =========================
 
 @app.post("/api/sessions/start")
-def start_session(station_id: int, user_id: int, db: Session = Depends(get_db)):
+def start_session(
+    station_id: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
     station = db.query(models.Station).filter(models.Station.id == station_id).first()
 
     if not station:
@@ -164,7 +196,12 @@ def start_session(station_id: int, user_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/sessions/end")
-def end_session(session_id: int, kwh_used: float, db: Session = Depends(get_db)):
+def end_session(
+    session_id: int,
+    kwh_used: float,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
     session = db.query(models.ChargingSession).filter(models.ChargingSession.id == session_id).first()
 
     if not session:
@@ -176,7 +213,6 @@ def end_session(session_id: int, kwh_used: float, db: Session = Depends(get_db))
     session.end_time = datetime.utcnow()
     session.kwh_used = kwh_used
 
-    # 🔥 DYNAMIC PRICE
     station = db.query(models.Station).filter(models.Station.id == session.station_id).first()
 
     price_per_kwh = station.price_per_kwh if station else 0.2
@@ -218,5 +254,5 @@ def get_stats(db: Session = Depends(get_db)):
     return {
         "total_stations": total,
         "avg_price_per_kwh": round(avg_price or 0, 0),
-        "version": "v3"
+        "version": "v4"
     }
