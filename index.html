@@ -189,45 +189,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nb-dist{color:#2ecc40;font-size:12px;font-weight:600}
 .nb-close{color:rgba(255,255,255,0.6);font-size:18px;cursor:pointer;padding:4px}
 
-
-#charging-page{display:none;position:fixed;top:0;left:0;right:0;bottom:80px;background:linear-gradient(180deg,#060d1f 0%,#0d2060 60%,#1a3a8a 100%);z-index:50;flex-direction:column;align-items:center;overflow:hidden}
-#charging-page.active{display:flex}
-.cp-stars{position:absolute;inset:0;pointer-events:none}
-.cp-star{position:absolute;background:#fff;border-radius:50%;animation:twinkle 3s ease-in-out infinite}
-@keyframes twinkle{0%,100%{opacity:0.15}50%{opacity:0.9}}
-.cp-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px;width:100%}
-.cp-plug-anim{animation:float 3s ease-in-out infinite;margin-bottom:28px}
-@keyframes float{0%,100%{transform:translateY(0px)}50%{transform:translateY(-14px)}}
-.cp-idle-title{color:#fff;font-size:24px;font-weight:700;margin-bottom:10px;text-align:center}
-.cp-idle-sub{color:rgba(255,255,255,0.55);font-size:14px;text-align:center;margin-bottom:36px;line-height:1.7;padding:0 16px}
-.cp-scan-btn{background:linear-gradient(135deg,#2ecc40,#16a34a);color:#fff;border:none;border-radius:24px;padding:16px 44px;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 24px rgba(46,204,64,0.45);letter-spacing:0.3px}
-.cp-active{display:none;flex-direction:column;align-items:center;width:100%;padding:16px 20px 0}
-.cp-active.show{display:flex}
-.cp-header{width:100%;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.cp-station-info{text-align:left}
-.cp-station-lbl{color:rgba(255,255,255,0.5);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px}
-.cp-station-nm{color:#fff;font-size:15px;font-weight:700}
-.cp-timer{background:rgba(46,204,64,0.15);border:1px solid rgba(46,204,64,0.4);border-radius:20px;padding:7px 16px;color:#2ecc40;font-size:16px;font-weight:700;font-family:monospace;letter-spacing:1px}
-.cp-battery-container{position:relative;width:200px;height:200px;margin:4px 0 20px}
-.cp-battery-ring{transform:rotate(-90deg)}
-.cp-ring-bg{fill:none;stroke:rgba(255,255,255,0.08);stroke-width:14}
-.cp-ring-fill{fill:none;stroke:url(#greenGrad);stroke-width:14;stroke-linecap:round;stroke-dasharray:534;stroke-dashoffset:534;transition:stroke-dashoffset 1s linear}
-.cp-ring-glow{fill:none;stroke:rgba(46,204,64,0.2);stroke-width:22;stroke-linecap:round;stroke-dasharray:534;stroke-dashoffset:534;transition:stroke-dashoffset 1s linear;filter:blur(4px)}
-.cp-battery-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.cp-bolt-icon{animation:bolt-pulse 1.2s ease-in-out infinite}
-@keyframes bolt-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.9)}}
-.cp-kwh-val{font-size:28px;font-weight:700;color:#fff;line-height:1;margin-top:4px}
-.cp-kwh-lbl{font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:1px}
-.cp-energy-flow{width:100%;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-bottom:16px}
-.cp-energy-bar{height:100%;width:40%;background:linear-gradient(90deg,transparent,#2ecc40,#7fffd4,transparent);animation:eflow 1.8s linear infinite}
-@keyframes eflow{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
-.cp-stats-grid{display:flex;gap:10px;width:100%;margin-bottom:16px}
-.cp-stat{flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:13px 8px;text-align:center;backdrop-filter:blur(8px)}
-.cp-stat-v{font-size:19px;font-weight:700;color:#fff;line-height:1.2}
-.cp-stat-v.g{color:#2ecc40}
-.cp-stat-l{font-size:10px;color:rgba(255,255,255,0.45);margin-top:3px;letter-spacing:0.5px;text-transform:uppercase}
-.cp-stop{background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.45);color:#ef4444;border-radius:18px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;letter-spacing:0.3px}
-
 </style>
 </head>
 <body>
@@ -342,6 +303,7 @@ function renderList(stations) {
       <div class="sc-meta">
         <span class="tag">${s.network||'?'}</span>
         <span class="tag">⚡${s.power_kw||'?'}kW</span>
+        <span class="tag">🔌${(s.connector_types||'').split(',')[0]||'?'}</span>
         <span class="tag">🕐${s.working_hours||'24/7'}</span>
       </div>
       ${s.address?'<div class="sc-addr">📍'+s.address+'</div>':''}
@@ -443,87 +405,6 @@ map.on('load', async () => {
 </div>
 
 <canvas id="scanner-canvas" style="display:none"></canvas>
-
-<div id="charging-page">
-  <!-- Yulduzlar -->
-  <div class="cp-stars" id="cp-stars-bg"></div>
-
-  <!-- IDLE holat -->
-  <div class="cp-idle" id="cp-idle">
-    <div class="cp-plug-anim">
-      <svg width="110" height="110" viewBox="0 0 110 110">
-        <defs>
-          <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#2ecc40" stop-opacity="0.3"/>
-            <stop offset="100%" stop-color="#2ecc40" stop-opacity="0"/>
-          </radialGradient>
-        </defs>
-        <circle cx="55" cy="55" r="50" fill="url(#glowGrad)"/>
-        <circle cx="55" cy="55" r="36" fill="rgba(46,204,64,0.12)" stroke="rgba(46,204,64,0.3)" stroke-width="1.5"/>
-        <path d="M45 32v18M65 32v18" stroke="#2ecc40" stroke-width="5" stroke-linecap="round"/>
-        <path d="M38 48h34v10a12 12 0 01-12 12h-10a12 12 0 01-12-12V48z" fill="rgba(46,204,64,0.2)" stroke="#2ecc40" stroke-width="2"/>
-        <path d="M55 70v10" stroke="#2ecc40" stroke-width="4" stroke-linecap="round"/>
-        <path d="M62 80H48" stroke="#2ecc40" stroke-width="4" stroke-linecap="round"/>
-        <path d="M60 54l-6 8h5l-4 8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <div class="cp-idle-title">Zaryadlash tayyor</div>
-    <div class="cp-idle-sub">Elektr stansiyaga boring va<br>QR kodni skanerlang</div>
-    <button class="cp-scan-btn" onclick="goToScanner()">📷 QR Kodni Skanerlash</button>
-  </div>
-
-  <!-- AKTIV zaryadlash -->
-  <div class="cp-active" id="cp-active">
-    <div class="cp-header">
-      <div class="cp-station-info">
-        <div class="cp-station-lbl">Zaryadlanmoqda</div>
-        <div class="cp-station-nm" id="cp-station-name">—</div>
-      </div>
-      <div class="cp-timer" id="cp-time">00:00</div>
-    </div>
-
-    <div class="cp-battery-container">
-      <svg class="cp-battery-ring" width="200" height="200" viewBox="0 0 200 200">
-        <defs>
-          <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#2ecc40"/>
-            <stop offset="100%" stop-color="#7fffd4"/>
-          </linearGradient>
-        </defs>
-        <circle class="cp-ring-bg" cx="100" cy="100" r="85"/>
-        <circle class="cp-ring-glow" id="cp-ring-glow" cx="100" cy="100" r="85"/>
-        <circle class="cp-ring-fill" id="cp-ring-fill" cx="100" cy="100" r="85"/>
-      </svg>
-      <div class="cp-battery-center">
-        <svg class="cp-bolt-icon" width="36" height="36" viewBox="0 0 24 24">
-          <path d="M13 2L3 14h8l-1 8 10-12h-8z" fill="#2ecc40"/>
-        </svg>
-        <div class="cp-kwh-val" id="cp-kwh">0.00</div>
-        <div class="cp-kwh-lbl">kWh</div>
-      </div>
-    </div>
-
-    <div class="cp-energy-flow"><div class="cp-energy-bar"></div></div>
-
-    <div class="cp-stats-grid">
-      <div class="cp-stat">
-        <div class="cp-stat-v g" id="cp-cost">0</div>
-        <div class="cp-stat-l">so'm</div>
-      </div>
-      <div class="cp-stat">
-        <div class="cp-stat-v" id="cp-power-val">—</div>
-        <div class="cp-stat-l">kW</div>
-      </div>
-      <div class="cp-stat">
-        <div class="cp-stat-v" id="cp-price-val">—</div>
-        <div class="cp-stat-l">so'm/kWh</div>
-      </div>
-    </div>
-
-    <button class="cp-stop" onclick="stopCharging()">⏹ Zaryadlashni Yakunlash</button>
-  </div>
-</div>
-
 <div id="scanner-page">
   <video id="scanner-video" autoplay playsinline muted></video>
   <div class="scanner-overlay">
@@ -709,7 +590,7 @@ function switchTab(el){
     if(mapEl) mapEl.style.display='none';
     if(header) header.style.display='none';
     if(balanceWidget) balanceWidget.style.display='none';
-    if(chargingPage){chargingPage.classList.add('active');initStars();}
+    if(chargingPage) chargingPage.classList.add('active');
   } else if(idx===4){
     if(mapEl) mapEl.style.display='none';
     if(header) header.style.display='none';
@@ -785,13 +666,18 @@ function loadStationsList(type, btn) {
       
       container.innerHTML = filtered.map(s => {
         const isFast = (s.power_kw || 0) >= 50;
+        const connectors = (s.connector_types || 'CCS2').split(',').map(c =>
+          '<span class="sci-badge">' + c.trim() + '</span>'
+        ).join('');
         return `<div class="station-card-item">
           <span class="sci-speed-tag ${isFast ? 'fast' : 'slow'}">${isFast ? '⚡ Tez' : '🔌 Sekin'} • ${s.power_kw || '?'} kW</span>
           <div class="sci-top">
             <div class="sci-name">${s.name}</div>
             <div class="sci-price">${s.price_per_kwh || '?'} so'm/kWh</div>
           </div>
-          <div class="sci-badges">            <span class="sci-badge">${s.network || '—'}</span>
+          <div class="sci-badges">
+            ${connectors}
+            <span class="sci-badge">${s.network || '—'}</span>
             <span class="sci-badge">${s.working_hours || '24/7'}</span>
           </div>
           <div class="sci-addr">📍 ${s.address || '—'}</div>
@@ -892,10 +778,10 @@ function loginUser() {
         window.__user = data;
         // Balansni ko'rsataman
         const balEl = document.getElementById('bw-amount-text');
-        if(balEl) balEl.textContent = Math.round(Number(data.balance)||0).toLocaleString() + " so'm";
+        if(balEl) balEl.textContent = Number(data.balance).toLocaleString() + " so'm";
         // Profil balansini ham yangilayman
         const profBal = document.querySelector('.balance-amount');
-        if(profBal) profBal.textContent = Math.round(Number(data.balance)||0).toLocaleString() + ' UZS';
+        if(profBal) profBal.textContent = Number(data.balance).toLocaleString() + ' UZS';
       })
       .catch(()=>{});
   } catch(e) {}
@@ -917,50 +803,3 @@ function loadTgProfile(){
 </script>
 </body>
 </html>
-function startChargingSession(station) {
-  initStars();
-  chargingSession = {station:station, startTime:Date.now(), kwh:0, cost:0};
-  document.getElementById('cp-station-name').textContent = station.name || 'Stansiya';
-  document.getElementById('cp-power-val').textContent = station.power_kw || '—';
-  document.getElementById('cp-price-val').textContent = station.price_per_kwh || '—';
-  document.getElementById('cp-idle').style.display = 'none';
-  document.getElementById('cp-active').classList.add('show');
-  if(chargingTimer) clearInterval(chargingTimer);
-  chargingTimer = setInterval(()=>{
-    if(!chargingSession) return;
-    const elapsed = (Date.now()-chargingSession.startTime)/1000;
-    const hours = elapsed/3600;
-    const power = station.power_kw||50;
-    const kwh = hours*power;
-    const cost = kwh*(station.price_per_kwh||1500);
-    const m = Math.floor(elapsed/60), s = Math.floor(elapsed%60);
-    document.getElementById('cp-time').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-    document.getElementById('cp-kwh').textContent = kwh.toFixed(2);
-    document.getElementById('cp-cost').textContent = Math.round(cost).toLocaleString();
-    // Ring animatsiyasi — max 1 soat
-    const pct = Math.min(elapsed/3600,1);
-    const offset = 534*(1-pct);
-    document.getElementById('cp-ring-fill').style.strokeDashoffset = offset;
-    document.getElementById('cp-ring-glow').style.strokeDashoffset = offset;
-    chargingSession.kwh=kwh; chargingSession.cost=cost;
-  },1000);
-  const chargeTab = document.querySelectorAll('.tab-item')[3];
-  if(chargeTab) switchTab(chargeTab);
-}
-
-function stopCharging(){
-  if(!chargingSession) return;
-  clearInterval(chargingTimer); chargingTimer=null;
-  const kwh=chargingSession.kwh.toFixed(2);
-  const cost=Math.round(chargingSession.cost).toLocaleString();
-  alert('✅ Zaryadlash yakunlandi!\n\n⚡ Sarflangan: '+kwh+' kWh\n💳 To\'lov: '+cost+' so\'m\n\nRahmat! AvtoTok');
-  chargingSession=null;
-  document.getElementById('cp-idle').style.display='';
-  document.getElementById('cp-active').classList.remove('show');
-  document.getElementById('cp-kwh').textContent='0.00';
-  document.getElementById('cp-time').textContent='00:00';
-  document.getElementById('cp-cost').textContent='0';
-  document.getElementById('cp-ring-fill').style.strokeDashoffset='534';
-  document.getElementById('cp-ring-glow').style.strokeDashoffset='534';
-}
-
