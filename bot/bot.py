@@ -43,3 +43,21 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+@dp.message(Command("status"))
+async def cmd_status(message: types.Message):
+    """Bot holati"""
+    import aiohttp
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(API_URL + '/') as resp:
+                data = await resp.json()
+                await message.answer(
+                    "✅ Backend ishlayapti\n"
+                    "📊 Versiya: " + str(data.get('message','?')) + "\n"
+                    "🚀 Stansiyalar API: " + API_URL
+                )
+    except:
+        await message.answer("❌ Backend bilan ulanishda xatolik")
+
+
