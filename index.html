@@ -169,7 +169,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sd-btn-charge{flex:1;background:#2ecc40;color:#fff;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
 
 </style>
-<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body>
 <div id="loading-overlay">
@@ -671,31 +670,28 @@ function loadStationsList(type, btn) {
 }
 
 function openScanner(){
+  // Telegram native QR scanner — eng ishonchli usul
+  try {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if(tg && tg.showScanQrPopup) {
+      tg.showScanQrPopup({text: 'Stansiyadagi QR kodni skanerlang'}, function(data){
+        if(data) {
+          tg.closeScanQrPopup && tg.closeScanQrPopup();
+          handleQRResult(data);
+          return true;
+        }
+      });
+      return;
+    }
+  } catch(e) {}
+  // Fallback: manual kamera
   document.getElementById('scanner-page').classList.add('active');
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
     .then(stream=>{
       scannerStream=stream;
       const video=document.getElementById('scanner-video');
       video.srcObject=stream;
-      video.addEventListener('loadedmetadata',()=>{
-        video.play();
-        scannerInterval=setInterval(()=>{
-          if(video.readyState===video.HAVE_ENOUGH_DATA){
-            const canvas=document.getElementById('scanner-canvas');
-            canvas.width=video.videoWidth;
-            canvas.height=video.videoHeight;
-            canvas.getContext('2d').drawImage(video,0,0);
-            const img=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);
-            if(typeof jsQR!=='undefined'){
-              const code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
-              if(code&&code.data){
-                clearInterval(scannerInterval);scannerInterval=null;
-                handleQRResult(code.data);
-              }
-            }
-          }
-        },200);
-      });
+      video.addEventListener('loadedmetadata',()=>{ video.play(); });
     })
     .catch(err=>{
       alert('Kamera ochilmadi: '+err.message);
