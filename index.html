@@ -168,6 +168,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sd-btn-nav{flex:1;background:#1a3a8a;color:#fff;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
 .sd-btn-charge{flex:1;background:#2ecc40;color:#fff;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
 
+
+#search-bar{position:absolute;top:66px;left:12px;right:12px;z-index:10;display:flex;gap:8px;align-items:center}
+#search-input{flex:1;background:#fff;border:none;border-radius:14px;padding:12px 16px;font-size:14px;color:#1a1a2e;box-shadow:0 2px 10px rgba(0,0,0,0.12);outline:none}
+#search-input::placeholder{color:#bbb}
+#search-results{position:absolute;top:52px;left:0;right:48px;background:#fff;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,0.15);max-height:220px;overflow-y:auto;display:none;z-index:11}
+#search-results.open{display:block}
+.search-result-item{padding:12px 16px;border-bottom:1px solid #f5f5f5;cursor:pointer;font-size:14px;color:#1a1a2e}
+.search-result-item:last-child{border-bottom:none}
+.search-result-item:hover{background:#f7f9ff}
+.sri-name{font-weight:600;margin-bottom:2px}
+.sri-info{font-size:12px;color:#999}
+#nearest-btn{width:44px;height:44px;background:#1a3a8a;border:none;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.15);flex-shrink:0}
+#nearest-banner{position:absolute;top:120px;left:12px;right:12px;z-index:10;background:#1a3a8a;border-radius:14px;padding:12px 16px;display:none;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,0.2)}
+#nearest-banner.show{display:flex}
+.nb-icon{width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nb-text{flex:1}
+.nb-label{color:rgba(255,255,255,0.75);font-size:11px;margin-bottom:2px}
+.nb-name{color:#fff;font-size:14px;font-weight:700}
+.nb-dist{color:#2ecc40;font-size:12px;font-weight:600}
+.nb-close{color:rgba(255,255,255,0.6);font-size:18px;cursor:pointer;padding:4px}
+
 </style>
 </head>
 <body>
@@ -422,6 +443,33 @@ map.on('load', async () => {
     <div class="profile-menu-item"><div class="profile-menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><span class="profile-menu-label">To'lov tarixi</span><span class="profile-menu-arrow">›</span></div>
   </div>
 </div>
+
+<div id="search-bar">
+  <div style="flex:1;position:relative">
+    <input id="search-input" type="text" placeholder="🔍 Stansiya qidirish..." oninput="onSearchInput(this.value)" onfocus="onSearchFocus()" onblur="setTimeout(()=>closeSearch(),200)">
+    <div id="search-results"></div>
+  </div>
+  <button id="nearest-btn" onclick="findNearest()" title="Eng yaqin stansiya">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5">
+      <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+      <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" fill="rgba(255,255,255,0.2)"/>
+    </svg>
+  </button>
+</div>
+<div id="nearest-banner">
+  <div class="nb-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2ecc40" stroke-width="2.5">
+      <path d="M13 2L3 14h8l-1 8 10-12h-8z" fill="#2ecc40"/>
+    </svg>
+  </div>
+  <div class="nb-text">
+    <div class="nb-label">Eng yaqin stansiya</div>
+    <div class="nb-name" id="nb-name">—</div>
+    <div class="nb-dist" id="nb-dist">—</div>
+  </div>
+  <span class="nb-close" onclick="document.getElementById('nearest-banner').classList.remove('show')">✕</span>
+</div>
+
 <div id="balance-widget">
   <div class="bw-icon">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2">
@@ -521,6 +569,67 @@ function switchTab(el){
 
 let currentStation = null;
 
+
+
+let allStations = [];
+
+function onSearchInput(val) {
+  const q = val.trim().toLowerCase();
+  const results = document.getElementById('search-results');
+  if(!q || !allStations.length) { results.classList.remove('open'); return; }
+  const filtered = allStations.filter(s =>
+    (s.name||'').toLowerCase().includes(q) ||
+    (s.address||'').toLowerCase().includes(q) ||
+    (s.city||'').toLowerCase().includes(q)
+  ).slice(0, 6);
+  if(!filtered.length) { results.classList.remove('open'); return; }
+  results.innerHTML = filtered.map(s => `
+    <div class="search-result-item" onclick="selectStation('${s.id}')">
+      <div class="sri-name">${s.name}</div>
+      <div class="sri-info">📍 ${s.address||s.city||'—'} • ⚡ ${s.power_kw||'?'}kW • ${s.price_per_kwh||'?'} so'm</div>
+    </div>
+  `).join('');
+  results.classList.add('open');
+}
+
+function onSearchFocus() {
+  const val = document.getElementById('search-input').value;
+  if(val.trim()) onSearchInput(val);
+}
+
+function closeSearch() {
+  document.getElementById('search-results').classList.remove('open');
+}
+
+function selectStation(id) {
+  closeSearch();
+  document.getElementById('search-input').value = '';
+  const s = allStations.find(st=>String(st.id)===String(id));
+  if(!s) return;
+  map.flyTo({center:[s.lng, s.lat], zoom:15, duration:800});
+  setTimeout(()=>openStationDetail(s), 900);
+}
+
+function findNearest() {
+  if(!navigator.geolocation) { alert('Geolokatsiya ishlamaydi'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    if(!allStations.length) return;
+    let nearest = null, minDist = Infinity;
+    allStations.forEach(s => {
+      const d = calcDist(lat, lng, s.lat, s.lng);
+      if(d < minDist) { minDist = d; nearest = s; }
+    });
+    if(!nearest) return;
+    const distText = minDist < 1 ? Math.round(minDist*1000)+'m' : minDist.toFixed(1)+'km';
+    document.getElementById('nb-name').textContent = nearest.name;
+    document.getElementById('nb-dist').textContent = distText + ' uzoqlikda';
+    document.getElementById('nearest-banner').classList.add('show');
+    map.flyTo({center:[nearest.lng, nearest.lat], zoom:15, duration:1000});
+    setTimeout(()=>openStationDetail(nearest), 1100);
+  }, ()=>alert('Joylashuv aniqlanmadi'));
+}
 
 function calcDist(lat1, lon1, lat2, lon2) {
   const R = 6371;
