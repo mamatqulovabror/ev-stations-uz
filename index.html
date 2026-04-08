@@ -201,12 +201,8 @@ map.addControl(new mapboxgl.NavigationControl({showCompass: false}), 'bottom-rig
 
 function makeMarker(s, active) {
   const el = document.createElement('div');
-  el.style.cssText = 'position:relative;width:42px;height:52px;cursor:pointer;';
-  el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="42" height="52" viewBox="0 0 42 52">
-    <rect x="1" y="1" width="40" height="40" rx="12" fill="#16a34a" stroke="#fff" stroke-width="2"/>
-    <polygon points="21,52 13,38 29,38" fill="#16a34a"/>
-    <path d="M23 8L14 22h8l-1 14 12-16h-8z" fill="white"/>
-  </svg>`;
+  el.style.cssText = 'width:36px;height:36px;background:#1a3a8a;border-radius:50%;border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8z" fill="#2ecc40"/></svg>';
   return el;
 }
 
@@ -244,7 +240,7 @@ function renderMarkers(stations) {
         <span style="color:#888;font-size:11px">${s.network||''} · ⚡${s.power_kw||'?'}kW</span><br>
         ${s.address?'<span style="color:#aaa;font-size:11px">📍'+s.address+'</span>':''}
       </div>`);
-    const m = new mapboxgl.Marker({element:el})
+    const m = new mapboxgl.Marker({element:el, anchor:'bottom'})
       .setLngLat([s.lng, s.lat])
       .setPopup(popup)
       .addTo(map);
