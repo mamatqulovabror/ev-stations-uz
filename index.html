@@ -223,10 +223,8 @@ map.addControl(new mapboxgl.NavigationControl({showCompass: false}), 'bottom-rig
 
 function makeMarker(s, active) {
   const el = document.createElement('div');
-  const isActive = s.is_active !== false && s.status !== 'offline';
-  const bg = isActive ? '#1a3a8a' : '#999';
-  el.style.cssText = 'width:36px;height:36px;background:'+bg+';border-radius:50%;border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;';
-  el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8z" fill="' + (isActive ? '#2ecc40' : '#ccc') + '"/></svg>';
+  el.style.cssText = 'width:36px;height:36px;background:#1a3a8a;border-radius:50%;border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8z" fill="#2ecc40"/></svg>';
   return el;
 }
 
@@ -464,6 +462,10 @@ map.on('load', async () => {
       <div class="sd-info-label">Ish vaqti</div>
       <div class="sd-info-value" id="sd-hours" style="font-size:13px">—</div>
     </div>
+    <div class="sd-info-card">
+      <div class="sd-info-label">Masofa</div>
+      <div class="sd-info-value" id="sd-dist" style="font-size:13px">—</div>
+    </div>
   </div>
   <div class="sd-actions">
     <button class="sd-btn-nav" id="sd-nav-btn" onclick="openNavigation()">
@@ -520,6 +522,17 @@ function switchTab(el){
 
 let currentStation = null;
 
+
+function calcDist(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 function openStationDetail(s) {
   currentStation = s;
   document.getElementById('sd-name').textContent = s.name || '—';
@@ -527,12 +540,14 @@ function openStationDetail(s) {
   document.getElementById('sd-price').textContent = s.price_per_kwh || '—';
   document.getElementById('sd-power').textContent = s.power_kw || '—';
   document.getElementById('sd-hours').textContent = s.working_hours || '24/7';
-  // Online/offline status
-  const statusEl = document.getElementById('sd-status');
-  const isActive = s.is_active !== false && s.status !== 'offline';
-  statusEl.className = 'sd-status' + (isActive ? '' : ' offline');
-  statusEl.innerHTML = '<div class="sd-status-dot"></div><span>' + (isActive ? 'Ochiq' : 'Yopiq') + '</span>';
-  // Marker rangini ham o'zgartiraman
+  // Masofani hisoblash
+  document.getElementById('sd-dist').textContent = '...';
+  if(navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const d = calcDist(pos.coords.latitude, pos.coords.longitude, s.lat, s.lng);
+      document.getElementById('sd-dist').textContent = d < 1 ? Math.round(d*1000)+'m' : d.toFixed(1)+'km';
+    }, () => { document.getElementById('sd-dist').textContent = '—'; });
+  }
   document.getElementById('station-detail').classList.add('open');
   document.getElementById('station-detail-overlay').classList.add('open');
 }
@@ -547,8 +562,16 @@ function openNavigation() {
   const lat = currentStation.lat;
   const lng = currentStation.lng;
   const name = encodeURIComponent(currentStation.name || 'EV Stansiya');
-  const url = 'https://yandex.com/maps/?rtext=~' + lat + ',' + lng + '&rtt=auto';
-  try { window.Telegram.WebApp.openLink(url); } catch(e) { window.open(url, '_blank'); }
+  // Foydalanuvchi joylashuvi orqali yo'nalish
+  navigator.geolocation.getCurrentPosition(pos => {
+    const from = pos.coords.latitude + ',' + pos.coords.longitude;
+    const to = lat + ',' + lng;
+    const url = 'https://yandex.uz/maps/?rtext=' + from + '~' + to + '&rtt=auto';
+    try { window.Telegram.WebApp.openLink(url); } catch(e) { window.open(url, '_blank'); }
+  }, () => {
+    const url = 'https://yandex.uz/maps/?pt=' + lng + ',' + lat + '&text=' + name + '&z=15';
+    try { window.Telegram.WebApp.openLink(url); } catch(e) { window.open(url, '_blank'); }
+  });
 }
 
 function openScannerFromDetail() {
@@ -556,17 +579,6 @@ function openScannerFromDetail() {
   const scannerTab = document.querySelectorAll('.tab-item')[2];
   if(scannerTab) switchTab(scannerTab);
 }
-
-
-// Real-time yangilash — har 30 soniyada
-setInterval(() => {
-  if(typeof renderMarkers === 'function') {
-    fetch('https://ev-stations-uz-production.up.railway.app/api/stations')
-      .then(r=>r.json())
-      .then(stations=>{ window.__stations = stations; renderMarkers(stations); })
-      .catch(()=>{});
-  }
-}, 30000);
 
 let scannerStream = null;
 let scannerInterval = null;
