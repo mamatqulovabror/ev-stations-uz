@@ -254,6 +254,7 @@ async function loadStations(network='') {
     const res = await fetch(url);
     allStations = await res.json();
     renderMarkers(allStations);
+    loginUser();
     renderList(allStations);
     
   } catch(e) {
@@ -759,6 +760,31 @@ function closeResult(){
 function startCharging(){
   alert('Zaryadlash boshlandi! ⚡\nStansiya bilan ulanmoqda...');
   closeResult();
+}
+
+
+function loginUser() {
+  try {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    const user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if(!user) return;
+    fetch('https://ev-stations-uz-production.up.railway.app/api/users/login?' +
+      'telegram_id=' + user.id +
+      '&first_name=' + encodeURIComponent(user.first_name || '') +
+      '&last_name=' + encodeURIComponent(user.last_name || '') +
+      '&username=' + encodeURIComponent(user.username || ''))
+      .then(r=>r.json())
+      .then(data=>{
+        window.__user = data;
+        // Balansni ko'rsataman
+        const balEl = document.getElementById('bw-amount-text');
+        if(balEl) balEl.textContent = Number(data.balance).toLocaleString() + " so'm";
+        // Profil balansini ham yangilayman
+        const profBal = document.querySelector('.balance-amount');
+        if(profBal) profBal.textContent = Number(data.balance).toLocaleString() + ' UZS';
+      })
+      .catch(()=>{});
+  } catch(e) {}
 }
 
 function loadTgProfile(){
