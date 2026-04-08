@@ -303,7 +303,6 @@ function renderList(stations) {
       <div class="sc-meta">
         <span class="tag">${s.network||'?'}</span>
         <span class="tag">⚡${s.power_kw||'?'}kW</span>
-        <span class="tag">🔌${(s.connector_types||'').split(',')[0]||'?'}</span>
         <span class="tag">🕐${s.working_hours||'24/7'}</span>
       </div>
       ${s.address?'<div class="sc-addr">📍'+s.address+'</div>':''}
@@ -666,18 +665,13 @@ function loadStationsList(type, btn) {
       
       container.innerHTML = filtered.map(s => {
         const isFast = (s.power_kw || 0) >= 50;
-        const connectors = (s.connector_types || 'CCS2').split(',').map(c =>
-          '<span class="sci-badge">' + c.trim() + '</span>'
-        ).join('');
         return `<div class="station-card-item">
           <span class="sci-speed-tag ${isFast ? 'fast' : 'slow'}">${isFast ? '⚡ Tez' : '🔌 Sekin'} • ${s.power_kw || '?'} kW</span>
           <div class="sci-top">
             <div class="sci-name">${s.name}</div>
             <div class="sci-price">${s.price_per_kwh || '?'} so'm/kWh</div>
           </div>
-          <div class="sci-badges">
-            ${connectors}
-            <span class="sci-badge">${s.network || '—'}</span>
+          <div class="sci-badges">            <span class="sci-badge">${s.network || '—'}</span>
             <span class="sci-badge">${s.working_hours || '24/7'}</span>
           </div>
           <div class="sci-addr">📍 ${s.address || '—'}</div>
@@ -778,10 +772,10 @@ function loginUser() {
         window.__user = data;
         // Balansni ko'rsataman
         const balEl = document.getElementById('bw-amount-text');
-        if(balEl) balEl.textContent = Number(data.balance).toLocaleString() + " so'm";
+        if(balEl) balEl.textContent = Math.round(Number(data.balance)||0).toLocaleString() + " so'm";
         // Profil balansini ham yangilayman
         const profBal = document.querySelector('.balance-amount');
-        if(profBal) profBal.textContent = Number(data.balance).toLocaleString() + ' UZS';
+        if(profBal) profBal.textContent = Math.round(Number(data.balance)||0).toLocaleString() + ' UZS';
       })
       .catch(()=>{});
   } catch(e) {}
