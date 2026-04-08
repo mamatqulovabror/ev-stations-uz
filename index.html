@@ -146,6 +146,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .bw-label{color:#888;font-size:11px;margin-bottom:2px;font-weight:500}
 .bw-amount{color:#1a3a8a;font-size:16px;font-weight:700;line-height:1.2}
 
+
+#station-detail{position:fixed;bottom:-100%;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;z-index:200;transition:bottom 0.35s cubic-bezier(0.4,0,0.2,1);padding:0 0 32px;box-shadow:0 -4px 24px rgba(0,0,0,0.12)}
+#station-detail.open{bottom:0}
+#station-detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:199}
+#station-detail-overlay.open{display:block}
+.sd-handle{width:40px;height:4px;background:#e0e0e0;border-radius:2px;margin:12px auto 16px}
+.sd-header{padding:0 20px 16px;border-bottom:1px solid #f0f0f0}
+.sd-status{display:inline-flex;align-items:center;gap:6px;background:#e8faf0;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:10px}
+.sd-status.offline{background:#fef2f2;color:#dc2626}
+.sd-status-dot{width:7px;height:7px;border-radius:50%;background:#16a34a}
+.sd-status.offline .sd-status-dot{background:#dc2626}
+.sd-name{font-size:19px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
+.sd-addr{font-size:13px;color:#888;display:flex;align-items:center;gap:4px}
+.sd-info-row{display:flex;gap:10px;padding:16px 20px;border-bottom:1px solid #f0f0f0}
+.sd-info-card{flex:1;background:#f7f9ff;border-radius:14px;padding:12px;text-align:center}
+.sd-info-label{font-size:11px;color:#999;margin-bottom:4px;font-weight:500}
+.sd-info-value{font-size:17px;font-weight:700;color:#1a3a8a}
+.sd-info-value.green{color:#16a34a}
+.sd-actions{padding:16px 20px;display:flex;gap:10px}
+.sd-btn-nav{flex:1;background:#1a3a8a;color:#fff;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.sd-btn-charge{flex:1;background:#2ecc40;color:#fff;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
 </head>
@@ -260,7 +282,8 @@ function renderList(stations) {
       <div class="sc-meta">
         <span class="tag">${s.network||'?'}</span>
         <span class="tag">⚡${s.power_kw||'?'}kW</span>
-                <span class="tag">🕐${s.working_hours||'24/7'}</span>
+        <span class="tag">🔌${(s.connector_types||'').split(',')[0]||'?'}</span>
+        <span class="tag">🕐${s.working_hours||'24/7'}</span>
       </div>
       ${s.address?'<div class="sc-addr">📍'+s.address+'</div>':''}
     </div>`).join('');
@@ -412,6 +435,44 @@ map.on('load', async () => {
     <div class="bw-amount" id="bw-amount-text">0 so'm</div>
   </div>
 </div>
+
+<div id="station-detail-overlay" onclick="closeStationDetail()"></div>
+<div id="station-detail">
+  <div class="sd-handle"></div>
+  <div class="sd-header">
+    <div class="sd-status" id="sd-status">
+      <div class="sd-status-dot"></div>
+      <span>Ochiq</span>
+    </div>
+    <div class="sd-name" id="sd-name">—</div>
+    <div class="sd-addr">📍 <span id="sd-addr">—</span></div>
+  </div>
+  <div class="sd-info-row">
+    <div class="sd-info-card">
+      <div class="sd-info-label">Narx</div>
+      <div class="sd-info-value green" id="sd-price">—</div>
+      <div class="sd-info-label">so'm/kWh</div>
+    </div>
+    <div class="sd-info-card">
+      <div class="sd-info-label">Quvvat</div>
+      <div class="sd-info-value" id="sd-power">—</div>
+      <div class="sd-info-label">kW</div>
+    </div>
+    <div class="sd-info-card">
+      <div class="sd-info-label">Ish vaqti</div>
+      <div class="sd-info-value" id="sd-hours" style="font-size:13px">—</div>
+    </div>
+  </div>
+  <div class="sd-actions">
+    <button class="sd-btn-nav" id="sd-nav-btn" onclick="openNavigation()">
+      🧭 Yo'nalish
+    </button>
+    <button class="sd-btn-charge" onclick="openScannerFromDetail()">
+      ⚡ Zaryadlash
+    </button>
+  </div>
+</div>
+
 <div id="tab-bar">
   <div class="tab-item active" onclick="switchTab(this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
@@ -452,6 +513,40 @@ function switchTab(el){
     if(mapEl) mapEl.style.display = 'block';
     if(header) header.style.display = 'flex';
   }
+}
+
+
+let currentStation = null;
+
+function openStationDetail(s) {
+  currentStation = s;
+  document.getElementById('sd-name').textContent = s.name || '—';
+  document.getElementById('sd-addr').textContent = s.address || s.city || '—';
+  document.getElementById('sd-price').textContent = s.price_per_kwh || '—';
+  document.getElementById('sd-power').textContent = s.power_kw || '—';
+  document.getElementById('sd-hours').textContent = s.working_hours || '24/7';
+  document.getElementById('station-detail').classList.add('open');
+  document.getElementById('station-detail-overlay').classList.add('open');
+}
+
+function closeStationDetail() {
+  document.getElementById('station-detail').classList.remove('open');
+  document.getElementById('station-detail-overlay').classList.remove('open');
+}
+
+function openNavigation() {
+  if(!currentStation) return;
+  const lat = currentStation.lat;
+  const lng = currentStation.lng;
+  const name = encodeURIComponent(currentStation.name || 'EV Stansiya');
+  const url = 'https://yandex.com/maps/?rtext=~' + lat + ',' + lng + '&rtt=auto';
+  try { window.Telegram.WebApp.openLink(url); } catch(e) { window.open(url, '_blank'); }
+}
+
+function openScannerFromDetail() {
+  closeStationDetail();
+  const scannerTab = document.querySelectorAll('.tab-item')[2];
+  if(scannerTab) switchTab(scannerTab);
 }
 
 let scannerStream = null;
@@ -521,14 +616,18 @@ function loadStationsList(type, btn) {
       
       container.innerHTML = filtered.map(s => {
         const isFast = (s.power_kw || 0) >= 50;
-        
+        const connectors = (s.connector_types || 'CCS2').split(',').map(c =>
+          '<span class="sci-badge">' + c.trim() + '</span>'
+        ).join('');
         return `<div class="station-card-item">
           <span class="sci-speed-tag ${isFast ? 'fast' : 'slow'}">${isFast ? '⚡ Tez' : '🔌 Sekin'} • ${s.power_kw || '?'} kW</span>
           <div class="sci-top">
             <div class="sci-name">${s.name}</div>
             <div class="sci-price">${s.price_per_kwh || '?'} so'm/kWh</div>
           </div>
-          <div class="sci-badges">            <span class="sci-badge">${s.network || '—'}</span>
+          <div class="sci-badges">
+            ${connectors}
+            <span class="sci-badge">${s.network || '—'}</span>
             <span class="sci-badge">${s.working_hours || '24/7'}</span>
           </div>
           <div class="sci-addr">📍 ${s.address || '—'}</div>
