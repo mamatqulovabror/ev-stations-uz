@@ -29,6 +29,33 @@ def haversine(lat1, lon1, lat2, lon2):
 def root():
     return {"message": "EV Stations UZ API", "filter": "price < 2000 som/kWh"}
 
+
+# =========================
+# USERS
+# =========================
+
+@app.post("/api/users/login")
+def user_login(telegram_id: int, first_name: str = "", last_name: str = "", username: str = "", db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.telegram_id == telegram_id).first()
+    if not user:
+        user = models.User(telegram_id=telegram_id, first_name=first_name, last_name=last_name, username=username, balance=0)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        user.first_name = first_name
+        user.last_name = last_name
+        db.commit()
+    return {"id": user.id, "telegram_id": user.telegram_id, "first_name": user.first_name, "last_name": user.last_name, "username": user.username, "balance": user.balance}
+
+@app.get("/api/users/{telegram_id}")
+def get_user(telegram_id: int, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.telegram_id == telegram_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"id": user.id, "telegram_id": user.telegram_id, "first_name": user.first_name, "balance": user.balance}
+
+
 @app.get("/api/stations", response_model=List[schemas.Station])
 def get_stations(
     lat: Optional[float] = Query(None),
