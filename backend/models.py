@@ -1,8 +1,8 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+from database import Base
 from datetime import datetime
 
-Base = declarative_base()
 
 # =========================
 # STATIONS
@@ -11,13 +11,14 @@ class Station(Base):
     __tablename__ = "stations"
 
     id = Column(Integer, primary_key=True, index=True)
+
     name = Column(String, nullable=False)
     address = Column(String)
 
-    lat = Column(Float, nullable=False)
-    lng = Column(Float, nullable=False)
+    lat = Column(Float, nullable=False, index=True)
+    lon = Column(Float, nullable=False, index=True)  # 🔥 FIX (lng → lon)
 
-    price_per_kwh = Column(Float, nullable=False)
+    price_per_kwh = Column(Float, nullable=False, index=True)
     power_kw = Column(Float)
 
     network = Column(String)
@@ -28,15 +29,18 @@ class Station(Base):
 
     is_active = Column(Boolean, default=True)
 
-    # 🔥 NEW (CRITICAL)
+    # 🔥 REAL-TIME STATUS
     status = Column(String, default="offline")  # available / busy / offline
     last_ping = Column(DateTime, default=datetime.utcnow)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # 🔥 RELATION
+    sessions = relationship("ChargingSession", back_populates="station")
+
 
 # =========================
-# USERS (minimal auth uchun)
+# USERS
 # =========================
 class User(Base):
     __tablename__ = "users"
@@ -47,9 +51,12 @@ class User(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # 🔥 RELATION
+    sessions = relationship("ChargingSession", back_populates="user")
+
 
 # =========================
-# CHARGING SESSIONS (ENG MUHIM)
+# CHARGING SESSIONS
 # =========================
 class ChargingSession(Base):
     __tablename__ = "charging_sessions"
@@ -67,9 +74,13 @@ class ChargingSession(Base):
 
     status = Column(String, default="active")  # active / completed
 
+    # 🔥 RELATION
+    user = relationship("User", back_populates="sessions")
+    station = relationship("Station", back_populates="sessions")
+
 
 # =========================
-# FAVORITES (UX uchun)
+# FAVORITES
 # =========================
 class Favorite(Base):
     __tablename__ = "favorites"
