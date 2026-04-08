@@ -189,6 +189,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nb-dist{color:#2ecc40;font-size:12px;font-weight:600}
 .nb-close{color:rgba(255,255,255,0.6);font-size:18px;cursor:pointer;padding:4px}
 
+
+#charging-page{display:none;position:fixed;top:0;left:0;right:0;bottom:80px;background:#f2f4f8;z-index:50;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+#charging-page.active{display:flex}
+.cp-idle{text-align:center}
+.cp-idle-icon{width:100px;height:100px;background:#e8f0fe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.cp-idle-title{font-size:20px;font-weight:700;color:#1a1a2e;margin-bottom:8px}
+.cp-idle-sub{font-size:14px;color:#999;margin-bottom:28px}
+.cp-scan-btn{background:#1a3a8a;color:#fff;border:none;border-radius:16px;padding:14px 32px;font-size:16px;font-weight:700;cursor:pointer}
+.cp-active{width:100%;display:none;flex-direction:column;align-items:center}
+.cp-active.show{display:flex}
+.cp-station-name{font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:20px;text-align:center}
+.cp-circle{position:relative;width:200px;height:200px;margin-bottom:24px}
+.cp-circle svg{transform:rotate(-90deg)}
+.cp-circle-bg{fill:none;stroke:#e8f0fe;stroke-width:12}
+.cp-circle-fill{fill:none;stroke:#1a3a8a;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.cp-circle-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cp-kwh{font-size:28px;font-weight:700;color:#1a3a8a}
+.cp-kwh-label{font-size:12px;color:#999}
+.cp-stats{display:flex;gap:12px;width:100%;margin-bottom:24px}
+.cp-stat{flex:1;background:#fff;border-radius:14px;padding:14px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,0.06)}
+.cp-stat-val{font-size:18px;font-weight:700;color:#1a1a2e;margin-bottom:2px}
+.cp-stat-val.green{color:#16a34a}
+.cp-stat-label{font-size:11px;color:#999}
+.cp-stop-btn{background:#ef4444;color:#fff;border:none;border-radius:16px;padding:14px 40px;font-size:16px;font-weight:700;cursor:pointer;width:100%}
+
 </style>
 </head>
 <body>
@@ -404,6 +429,49 @@ map.on('load', async () => {
 </div>
 
 <canvas id="scanner-canvas" style="display:none"></canvas>
+
+<div id="charging-page">
+  <div class="cp-idle" id="cp-idle">
+    <div class="cp-idle-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1a3a8a" stroke-width="2">
+        <path d="M13 2L3 14h8l-1 8 10-12h-8z"/>
+      </svg>
+    </div>
+    <div class="cp-idle-title">Faol zaryadlash yo'q</div>
+    <div class="cp-idle-sub">Zaryadlash boshlash uchun stansiya QR kodini skaner qiling</div>
+    <button class="cp-scan-btn" onclick="goToScanner()">📷 QR Skaner</button>
+  </div>
+  <div class="cp-active" id="cp-active">
+    <div class="cp-station-name" id="cp-station-name">—</div>
+    <div class="cp-circle">
+      <svg width="200" height="200" viewBox="0 0 200 200">
+        <circle class="cp-circle-bg" cx="100" cy="100" r="88"/>
+        <circle class="cp-circle-fill" id="cp-progress-ring" cx="100" cy="100" r="88"
+          stroke-dasharray="553" stroke-dashoffset="553"/>
+      </svg>
+      <div class="cp-circle-text">
+        <div class="cp-kwh" id="cp-kwh">0.0</div>
+        <div class="cp-kwh-label">kWh</div>
+      </div>
+    </div>
+    <div class="cp-stats">
+      <div class="cp-stat">
+        <div class="cp-stat-val" id="cp-time">00:00</div>
+        <div class="cp-stat-label">Vaqt</div>
+      </div>
+      <div class="cp-stat">
+        <div class="cp-stat-val green" id="cp-cost">0</div>
+        <div class="cp-stat-label">so'm</div>
+      </div>
+      <div class="cp-stat">
+        <div class="cp-stat-val" id="cp-power">—</div>
+        <div class="cp-stat-label">kW</div>
+      </div>
+    </div>
+    <button class="cp-stop-btn" onclick="stopCharging()">⏹ Zaryadlashni to'xtatish</button>
+  </div>
+</div>
+
 <div id="scanner-page">
   <video id="scanner-video" autoplay playsinline muted></video>
   <div class="scanner-overlay">
@@ -567,6 +635,80 @@ function switchTab(el){
 }
 
 
+
+let chargingSession = null;
+let chargingTimer = null;
+
+function goToScanner() {
+  const scannerTab = document.querySelectorAll('.tab-item')[2];
+  if(scannerTab) switchTab(scannerTab);
+}
+
+function startChargingSession(station) {
+  chargingSession = {
+    station: station,
+    startTime: Date.now(),
+    kwh: 0,
+    cost: 0
+  };
+  document.getElementById('cp-station-name').textContent = station.name || 'Stansiya';
+  document.getElementById('cp-power').textContent = station.power_kw || '—';
+  document.getElementById('cp-idle').style.display = 'none';
+  document.getElementById('cp-active').classList.add('show');
+
+  // Timer boshlash
+  if(chargingTimer) clearInterval(chargingTimer);
+  chargingTimer = setInterval(() => {
+    if(!chargingSession) return;
+    const elapsed = (Date.now() - chargingSession.startTime) / 1000;
+    const hours = elapsed / 3600;
+    const power = station.power_kw || 50;
+    const kwh = hours * power;
+    const cost = kwh * (station.price_per_kwh || 1500);
+
+    // Vaqt
+    const m = Math.floor(elapsed / 60);
+    const s = Math.floor(elapsed % 60);
+    document.getElementById('cp-time').textContent =
+      String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+
+    // kWh
+    document.getElementById('cp-kwh').textContent = kwh.toFixed(2);
+
+    // Narx
+    document.getElementById('cp-cost').textContent = Math.round(cost).toLocaleString();
+
+    // Progress ring (max 60 daqiqa = to'liq aylana)
+    const maxSec = 3600;
+    const pct = Math.min(elapsed / maxSec, 1);
+    const offset = 553 * (1 - pct);
+    document.getElementById('cp-progress-ring').style.strokeDashoffset = offset;
+
+    chargingSession.kwh = kwh;
+    chargingSession.cost = cost;
+  }, 1000);
+
+  // Zaryadlanmoqda tabga o'tish
+  const chargeTab = document.querySelectorAll('.tab-item')[3];
+  if(chargeTab) switchTab(chargeTab);
+}
+
+function stopCharging() {
+  if(!chargingSession) return;
+  clearInterval(chargingTimer);
+  chargingTimer = null;
+  const kwh = chargingSession.kwh.toFixed(2);
+  const cost = Math.round(chargingSession.cost).toLocaleString();
+  alert('Zaryadlash tugadi!\n\nSarflangan: ' + kwh + ' kWh\nTo\'lov: ' + cost + ' so\'m');
+  chargingSession = null;
+  document.getElementById('cp-idle').style.display = '';
+  document.getElementById('cp-active').classList.remove('show');
+  document.getElementById('cp-kwh').textContent = '0.0';
+  document.getElementById('cp-time').textContent = '00:00';
+  document.getElementById('cp-cost').textContent = '0';
+  document.getElementById('cp-progress-ring').style.strokeDashoffset = '553';
+}
+
 let currentStation = null;
 
 
@@ -703,6 +845,8 @@ function switchTab(el){
     profilePage.style.display='none';
     scannerPage.classList.remove('active');
     document.getElementById('stations-page').classList.remove('active');
+    const chargingPage = document.getElementById('charging-page');
+    if(chargingPage) chargingPage.classList.remove('active');
     document.getElementById('scanner-result').classList.remove('active');
     if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
     if(scannerInterval){clearInterval(scannerInterval);scannerInterval=null;}
@@ -847,8 +991,10 @@ function closeResult(){
 }
 
 function startCharging(){
-  alert('Zaryadlash boshlandi! ⚡\nStansiya bilan ulanmoqda...');
   closeResult();
+  if(currentStation) {
+    startChargingSession(currentStation);
+  }
 }
 
 function loadTgProfile(){
