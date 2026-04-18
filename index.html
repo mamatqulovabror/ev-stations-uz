@@ -787,6 +787,65 @@ function loginUser() {
   } catch(e) {}
 }
 
+
+let currentStation = null;
+
+function openStationDetailById(id) {
+  const s = allStations.find(st=>String(st.id)===String(id));
+  if(s) openStationDetail(s);
+}
+
+function openStationDetail(s) {
+  currentStation = s;
+  document.getElementById('sd-name').textContent = s.name || '—';
+  document.getElementById('sd-addr').textContent = s.address || s.city || '—';
+  document.getElementById('sd-price').textContent = s.price_per_kwh || '—';
+  document.getElementById('sd-power').textContent = s.power_kw || '—';
+  document.getElementById('sd-hours').textContent = s.working_hours || '24/7';
+  const isActive = s.is_active !== false;
+  const statusEl = document.getElementById('sd-status');
+  statusEl.className = 'sd-status' + (isActive ? '' : ' offline');
+  statusEl.innerHTML = '<div class="sd-status-dot"></div><span>' + (isActive ? 'Ochiq' : 'Yopiq') + '</span>';
+  // Masofa
+  document.getElementById('sd-dist').textContent = '...';
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const d = calcDist(pos.coords.latitude, pos.coords.longitude, s.lat, s.lng);
+      document.getElementById('sd-dist').textContent = d<1 ? Math.round(d*1000)+'m' : d.toFixed(1)+'km';
+    }, ()=>{ document.getElementById('sd-dist').textContent = '—'; });
+  }
+  document.getElementById('station-detail').classList.add('open');
+  document.getElementById('station-detail-overlay').classList.add('open');
+}
+
+function closeStationDetail() {
+  document.getElementById('station-detail').classList.remove('open');
+  document.getElementById('station-detail-overlay').classList.remove('open');
+}
+
+function openNavigation() {
+  if(!currentStation) return;
+  const lat = currentStation.lat, lng = currentStation.lng;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const url = 'https://yandex.uz/maps/?rtext='+pos.coords.latitude+','+pos.coords.longitude+'~'+lat+','+lng+'&rtt=auto';
+    try{window.Telegram.WebApp.openLink(url);}catch(e){window.open(url,'_blank');}
+  }, ()=>{
+    const url = 'https://yandex.uz/maps/?pt='+lng+','+lat+'&z=15';
+    try{window.Telegram.WebApp.openLink(url);}catch(e){window.open(url,'_blank');}
+  });
+}
+
+function openScannerFromDetail() {
+  closeStationDetail();
+  const scannerTab = document.querySelectorAll('.tab-item')[2];
+  if(scannerTab) switchTab(scannerTab);
+}
+
+function startCharging(){
+  closeResult && closeResult();
+  if(currentStation) startChargingSession && startChargingSession(currentStation);
+}
+
 function loadTgProfile(){
   try{
     const user=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initDataUnsafe&&window.Telegram.WebApp.initDataUnsafe.user;
