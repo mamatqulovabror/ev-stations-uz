@@ -644,29 +644,39 @@ function switchTab(el){
 
 
 function loadStationsList(type, btn) {
+  // Tab buttons
   document.querySelectorAll('.station-tab-btn').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  
   const container = document.getElementById('stations-list-container');
   container.innerHTML = '<div class="stations-empty">Yuklanmoqda...</div>';
+  
   fetch('https://ev-stations-uz-production.up.railway.app/api/stations')
     .then(r => r.json())
     .then(stations => {
+      // Tez: 50kW va undan yuqori, Sekin: 50kW dan kam
       const filtered = type === 'fast'
         ? stations.filter(s => (s.power_kw || 0) >= 50)
         : stations.filter(s => (s.power_kw || 0) < 50);
+      
       if(!filtered.length) {
         container.innerHTML = '<div class="stations-empty">Stansiya topilmadi</div>';
         return;
       }
+      
       container.innerHTML = filtered.map(s => {
         const isFast = (s.power_kw || 0) >= 50;
-        return `<div class="station-card-item">
+        const connectors = (s.connector_types || 'CCS2').split(',').map(c =>
+          '<span class="sci-badge">' + c.trim() + '</span>'
+        ).join('');
+        return `<div class="station-card-item" style="cursor:pointer" onclick="openStationDetailById(${s.id})">
           <span class="sci-speed-tag ${isFast ? 'fast' : 'slow'}">${isFast ? '⚡ Tez' : '🔌 Sekin'} • ${s.power_kw || '?'} kW</span>
           <div class="sci-top">
             <div class="sci-name">${s.name}</div>
             <div class="sci-price">${s.price_per_kwh || '?'} so'm/kWh</div>
           </div>
           <div class="sci-badges">
+            ${connectors}
             <span class="sci-badge">${s.network || '—'}</span>
             <span class="sci-badge">${s.working_hours || '24/7'}</span>
           </div>
@@ -675,9 +685,10 @@ function loadStationsList(type, btn) {
       }).join('');
     })
     .catch(() => {
-      container.innerHTML = '<div class="stations-empty">Qayta urinib ko\'ring</div>';
+      container.innerHTML = '<div class="stations-empty">Xatolik yuz berdi</div>';
     });
 }
+
 function openScanner(){
   // Telegram native QR scanner — eng ishonchli usul
   try {
@@ -736,18 +747,8 @@ function closeScanner(){
   document.getElementById('scanner-page').classList.remove('active');
   if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
   if(scannerInterval){clearInterval(scannerInterval);scannerInterval=null;}
-  // Xaritaga qaytamiz — map va header ko'rsatamiz
-  const mapEl = document.getElementById('map');
-  const header = document.getElementById('header');
-  const balanceWidget = document.getElementById('balance-widget');
-  if(mapEl) mapEl.style.display='block';
-  if(header) header.style.display='flex';
-  if(balanceWidget) balanceWidget.style.display='flex';
   const first=document.querySelector('.tab-item');
-  if(first){
-    document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
-    first.classList.add('active');
-  }
+  if(first) switchTab(first);
 }
 
 function closeResult(){
